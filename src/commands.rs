@@ -147,3 +147,33 @@ pub fn link(name: String) {
 
   println!("Linked {} to {}", name, format!("r{}", repo_code));
 }
+
+/****************************************
+* run
+****************************************/
+pub fn run(repo: String, cmd: Vec<String>) {
+  let config = utils::get_workspace_config().unwrap();
+
+  match config.links.get(&repo) {
+    None => {
+      println!("Repository not linked: {}", repo);
+      std::process::exit(1);
+    },
+    Some(..) => {}
+  }
+
+  let repo_base = utils::get_batl_toml_dir().unwrap().join(repo.clone());
+
+  let cmd_first = cmd.first().unwrap();
+  let cmd_rest = &cmd[1..];
+
+  std::process::Command::new(cmd_first)
+    .current_dir(repo_base)
+    .args(cmd_rest)
+    .spawn()
+    .unwrap()
+    .wait()
+    .unwrap();
+
+  println!("Ran {} in {}", cmd_first, repo);
+}

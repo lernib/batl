@@ -23,6 +23,12 @@ enum SubCli {
     },
     Link {
         name: String
+    },
+    Run {
+        #[arg(short = 'r', long = "repo")]
+        repo: String,
+        #[arg(last = true)]
+        cmd: Vec<String>
     }
 }
 
@@ -38,6 +44,9 @@ fn main() {
         },
         SubCli::Link { name } => {
             commands::link(name);
+        },
+        SubCli::Run { repo, cmd } => {
+            commands::run(repo, cmd);
         }
     }
 }
