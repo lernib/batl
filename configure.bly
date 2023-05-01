@@ -1,0 +1,5 @@
+BATL_REQ([0.0.1])
+
+INCLUDE([Rust])
+
+ADD_RUST_EXE_CRATE([batl])
