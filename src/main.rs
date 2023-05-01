@@ -4,6 +4,8 @@ mod commands;
 mod utils;
 mod config;
 
+use commands::CmdResult;
+
 #[derive(Parser)]
 #[command(name = "batl")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
@@ -62,31 +64,38 @@ enum AliasSubCli {
 }
 
 fn main() {
+    if let Err(e) = run() {
+        eprintln!("{}", e.to_string());
+        std::process::exit(1);
+    }
+}
+
+fn run() -> CmdResult<()> {
     let cli = Cli::parse();
 
     match cli.subcli {
         SubCli::Ls { all } => {
-            commands::ls(all);
+            commands::ls(all)
         },
         SubCli::Init { workspace, name } => {
-            commands::init(workspace, name);
+            commands::init(workspace, name)
         },
         SubCli::Purge { workspace, name } => {
-            commands::purge(workspace, name);
+            commands::purge(workspace, name)
         },
         SubCli::Link { name, repo } => {
-            commands::link(name, repo);
+            commands::link(name, repo)
         },
         SubCli::Unlink { name } => {
-            commands::unlink(name);
+            commands::unlink(name)
         },
         SubCli::Run { repo, cmd } => {
-            commands::run(repo, cmd);
+            commands::run(repo, cmd)
         },
         SubCli::Alias(args) => {
             match args.subcli {
                 AliasSubCli::Rename { old, new } => {
-                    commands::alias_rename(old, new);
+                    commands::alias_rename(old, new)
                 }
             }
         }

@@ -1,9 +1,10 @@
 use crate::utils;
+use crate::config::*;
 use std::{path::PathBuf, collections::HashMap};
 use regex::Regex;
 use lazy_static::lazy_static;
 use dialoguer::Confirm;
-use crate::config::*;
+use thiserror::Error;
 
 lazy_static! {
   static ref BATL_NAME_REGEX: Regex = Regex::new(r"^[a-z][a-z0-9\-_]*(/[a-z][a-z0-9\-_]*)+$").unwrap();
@@ -11,11 +12,24 @@ lazy_static! {
 }
 
 /****************************************
+* BatlError
+****************************************/
+#[derive(Error, Debug)]
+pub enum BatlError {
+  #[error("{0}")]
+  UtilityError(#[from] utils::UtilityError),
+  #[error("Invalid battalion name: {0}")]
+  InvalidBattalionName(String)
+}
+
+pub type CmdResult<T> = Result<T, BatlError>;
+
+/****************************************
 * ls
 ****************************************/
-pub fn ls(all: bool) {
+pub fn ls(all: bool) -> CmdResult<()> {
   if all {
-    let batl_root = utils::get_batl_root().unwrap();
+    let batl_root = utils::get_batl_root()?;
 
     let repo_root = batl_root.join("repositories");
 
@@ -63,25 +77,28 @@ pub fn ls(all: bool) {
     for repo in repos {
       println!("{}", repo);
     }
+
+    Ok(())
   } else {
-    let config = utils::get_workspace_config().unwrap();
+    let config = utils::get_workspace_config()?;
 
     for (code, name) in config.workspace.unwrap().iter() {
       println!("{}: {}", code, name);
     }
+
+    Ok(())
   }
 }
 
 /****************************************
 * init
 ****************************************/
-pub fn init(workspace: bool, name: String) {
+pub fn init(workspace: bool, name: String) -> CmdResult<()> {
   if !BATL_NAME_REGEX.is_match(&name) {
-    println!("Invalid name: {}", name);
-    return;
+    return Err(BatlError::InvalidBattalionName(name));
   }
 
-  let batl_root = utils::get_batl_root().unwrap();
+  let batl_root = utils::get_batl_root()?;
 
   let mut batl_base: PathBuf = batl_root.clone();
   if workspace {
@@ -108,7 +125,8 @@ pub fn init(workspace: bool, name: String) {
     std::process::exit(1);
   }
 
-  std::fs::create_dir_all(&path).unwrap();
+  std::fs::create_dir_all(&path)
+    .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))?;
 
   let mut batl_toml = path.clone();
   batl_toml.push("batl.toml");
@@ -135,21 +153,22 @@ pub fn init(workspace: bool, name: String) {
     }
   }
 
-  utils::write_toml(&batl_toml, &config).unwrap();
+  utils::write_toml(&batl_toml, &config)?;
 
   println!("Initialized {} {}", if workspace { "workspace" } else { "repository" }, name);
+
+  Ok(())
 }
 
 /****************************************
 * purge
 ****************************************/
-pub fn purge(workspace: bool, name: String) {
+pub fn purge(workspace: bool, name: String) -> CmdResult<()> {
   if !BATL_NAME_REGEX.is_match(&name) {
-    println!("Invalid name: {}", name);
-    return;
+    return Err(BatlError::InvalidBattalionName(name));
   }
 
-  let batl_root = utils::get_batl_root().unwrap();
+  let batl_root = utils::get_batl_root()?;
 
   let mut batl_base: PathBuf = batl_root.clone();
   if workspace {
@@ -176,28 +195,31 @@ pub fn purge(workspace: bool, name: String) {
     std::process::exit(1);
   }
 
-  if !Confirm::new().default(false).with_prompt(format!("Are you sure you want to purge {} {}? (there's no undo command!)", if workspace { "workspace" } else { "repository" }, name)).interact().unwrap() {
+  if !Confirm::new().default(false).with_prompt(format!("Are you sure you want to purge {} {}? (there's no undo command!)", if workspace { "workspace" } else { "repository" }, name)).interact()
+    .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))? {
     println!("Aborted");
     std::process::exit(1);
   }
 
-  std::fs::remove_dir_all(&path).unwrap();
+  std::fs::remove_dir_all(&path)
+    .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))?;
 
   println!("Purged {} {}", if workspace { "workspace" } else { "repository" }, name);
+
+  Ok(())
 }
 
 /****************************************
 * link
 ****************************************/
-pub fn link(name: Option<String>, repo: String) {
+pub fn link(name: Option<String>, repo: String) -> CmdResult<()> {
   if !BATL_NAME_REGEX.is_match(&repo) {
-    println!("Invalid repository: {}", repo);
-    return;
+    return Err(BatlError::InvalidBattalionName(repo));
   }
 
-  let mut config = utils::get_workspace_config().unwrap();
+  let mut config = utils::get_workspace_config()?;
 
-  let repo_base = utils::get_batl_root().unwrap().join("repositories");
+  let repo_base = utils::get_batl_root()?.join("repositories");
 
   let mut path = repo_base.clone();
   let parts: Vec<&str> = repo.split("/").collect();
@@ -236,25 +258,28 @@ pub fn link(name: Option<String>, repo: String) {
     }
   }
 
-  let workspace_dir = utils::get_batl_toml_dir().unwrap();
+  let workspace_dir = utils::get_batl_toml_dir()?;
   config.workspace = {
     let mut workspace = config.workspace.unwrap();
     workspace.insert(repo_code.clone(), repo.clone());
     Some(workspace)
   };
 
-  utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
+  utils::write_toml(&workspace_dir.join("batl.toml"), &config)?;
 
-  std::os::unix::fs::symlink(path, workspace_dir.join(&repo_code)).unwrap();
+  std::os::unix::fs::symlink(path, workspace_dir.join(&repo_code))
+    .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))?;
 
   println!("Linked {} to {}", repo, repo_code);
+
+  Ok(())
 }
 
 /****************************************
 * unlink
 ****************************************/
-pub fn unlink(name: String) {
-  let mut config = utils::get_workspace_config().unwrap();
+pub fn unlink(name: String) -> CmdResult<()> {
+  let mut config = utils::get_workspace_config()?;
 
   match config.clone().workspace.unwrap().get(&name) {
     None => {
@@ -264,10 +289,11 @@ pub fn unlink(name: String) {
     Some(..) => {}
   }
 
-  let workspace_dir = utils::get_batl_toml_dir().unwrap();
+  let workspace_dir = utils::get_batl_toml_dir()?;
   let repo_base = workspace_dir.join(&name);
 
-  std::fs::remove_file(&repo_base).unwrap();
+  std::fs::remove_file(&repo_base)
+    .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))?;
 
   config.workspace = {
     let mut workspace = config.workspace.unwrap();
@@ -275,16 +301,18 @@ pub fn unlink(name: String) {
     Some(workspace)
   };
 
-  utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
+  utils::write_toml(&workspace_dir.join("batl.toml"), &config)?;
 
   println!("Unlinked {}", name);
+
+  Ok(())
 }
 
 /****************************************
 * run
 ****************************************/
-pub fn run(repo: String, cmd: Vec<String>) {
-  let config = utils::get_workspace_config().unwrap();
+pub fn run(repo: String, cmd: Vec<String>) -> CmdResult<()> {
+  let config = utils::get_workspace_config()?;
 
   match config.workspace.unwrap().get(&repo) {
     None => {
@@ -294,7 +322,7 @@ pub fn run(repo: String, cmd: Vec<String>) {
     Some(..) => {}
   }
 
-  let repo_base = utils::get_batl_toml_dir().unwrap().join(repo.clone());
+  let repo_base = utils::get_batl_toml_dir()?.join(repo.clone());
 
   let cmd_first = cmd.first().unwrap();
   let cmd_rest = &cmd[1..];
@@ -308,13 +336,15 @@ pub fn run(repo: String, cmd: Vec<String>) {
     .unwrap();
 
   println!("Ran {} in {}", cmd_first, repo);
+
+  Ok(())
 }
 
 /****************************************
 * alias_rename
 ****************************************/
-pub fn alias_rename(old: String, new: String) {
-  let mut config = utils::get_workspace_config().unwrap();
+pub fn alias_rename(old: String, new: String) -> CmdResult<()> {
+  let mut config = utils::get_workspace_config()?;
 
   match config.clone().workspace.unwrap().get(&old) {
     None => {
@@ -340,10 +370,13 @@ pub fn alias_rename(old: String, new: String) {
     Some(map)
   };
 
-  let workspace_dir = utils::get_batl_toml_dir().unwrap();
-  utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
+  let workspace_dir = utils::get_batl_toml_dir()?;
+  utils::write_toml(&workspace_dir.join("batl.toml"), &config)?;
 
-  std::fs::rename(workspace_dir.join(&old), workspace_dir.join(&new)).unwrap();
+  std::fs::rename(workspace_dir.join(&old), workspace_dir.join(&new))
+    .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))?;
 
   println!("Renamed {} to {}", old, new);
+
+  Ok(())
 }
