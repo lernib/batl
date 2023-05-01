@@ -10,11 +10,12 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EnvConfig {
-  pub min_version: String
+  pub version: String
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct RepositoryConfig {
   pub name: String,
-  pub version: String
+  pub version: String,
+  pub build: String
 }

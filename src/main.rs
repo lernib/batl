@@ -45,6 +45,9 @@ enum SubCli {
         #[arg(last = true)]
         cmd: Vec<String>
     },
+    Build {
+        name: String
+    },
     Alias(AliasArgs)
 }
 
@@ -91,6 +94,9 @@ fn run() -> CmdResult<()> {
         },
         SubCli::Run { repo, cmd } => {
             commands::run(repo, cmd)
+        },
+        SubCli::Build { name } => {
+            commands::build(name)
         },
         SubCli::Alias(args) => {
             match args.subcli {

@@ -126,13 +126,13 @@ pub fn init(workspace: bool, name: String) -> CmdResult<()> {
   std::fs::create_dir_all(&path)
     .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))?;
 
-  let mut batl_toml = path;
+  let mut batl_toml = path.clone();
   batl_toml.push("batl.toml");
 
   let config: Config = if workspace {
     Config {
       environment: EnvConfig {
-        min_version: env!("CARGO_PKG_VERSION").to_string()
+        version: env!("CARGO_PKG_VERSION").to_string()
       },
       workspace: Some(HashMap::new()),
       repository: None
@@ -140,17 +140,29 @@ pub fn init(workspace: bool, name: String) -> CmdResult<()> {
   } else {
     Config {
       environment: EnvConfig {
-        min_version: env!("CARGO_PKG_VERSION").to_string()
+        version: env!("CARGO_PKG_VERSION").to_string()
       },
       workspace: None,
       repository: Some(RepositoryConfig {
         name: parts.last().unwrap().to_string(),
-        version: "0.0.1".to_string()
+        version: "0.0.1".to_string(),
+        build: "batl exec build.lua".to_string(),
       })
     }
   };
 
   utils::write_toml(&batl_toml, &config)?;
+
+  if !workspace {
+    let batl_build = path.join("build.lua");
+    utils::write_string(&batl_build, r#"
+
+function main()
+  print("Hello, world!")
+end
+
+"#  )?;
+  }
 
   println!("Initialized {} {}", if workspace { "workspace" } else { "repository" }, name);
 
@@ -333,6 +345,39 @@ pub fn run(repo: String, cmd: Vec<String>) -> CmdResult<()> {
     .unwrap();
 
   println!("Ran {} in {}", cmd_first, repo);
+
+  Ok(())
+}
+
+/****************************************
+* build
+****************************************/
+pub fn build(name: String) -> CmdResult<()> {
+  let config = utils::get_workspace_config()?;
+  let repo_base = utils::get_batl_toml_dir()?.join(name.clone());
+
+  if config.clone().workspace.unwrap().get(&name).is_none() {
+    println!("Repository not linked: {}", name);
+    std::process::exit(1);
+  }
+
+  let repo_config = utils::get_repo_config(&repo_base)?;
+
+  let cmd = std::process::Command::new("sh")
+    .current_dir(repo_base)
+    .arg("-c")
+    .arg(repo_config.repository.unwrap().build)
+    .spawn()
+    .unwrap()
+    .wait()
+    .unwrap();
+
+  if !cmd.success() {
+    println!("Build failed for {}", name);
+    std::process::exit(1);
+  }
+
+  println!("Built {}", name);
 
   Ok(())
 }
