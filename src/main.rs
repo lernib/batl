@@ -5,6 +5,9 @@ mod utils;
 mod config;
 
 #[derive(Parser)]
+#[command(name = "batl")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
+#[command(about = "The multi-repository manager", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     subcli: SubCli

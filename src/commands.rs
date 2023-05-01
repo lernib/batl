@@ -221,7 +221,7 @@ pub fn link(name: Option<String>, repo: String) {
   }
 
   let workspace_dir = utils::get_batl_toml_dir().unwrap();
-  config.links.insert(format!("r{}", repo_code), repo.clone());
+  config.links.insert(repo_code.clone(), repo.clone());
 
   utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
 
