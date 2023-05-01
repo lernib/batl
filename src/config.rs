@@ -1,9 +1,20 @@
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use std::{collections::HashMap};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
+  pub environment: EnvConfig,
+  pub workspace: Option<HashMap<String, String>>,
+  pub repository: Option<RepositoryConfig>
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct EnvConfig {
+  pub min_version: String
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct RepositoryConfig {
   pub name: String,
-  pub languages: Vec<String>,
-  pub links: HashMap<String, String>
+  pub version: String
 }

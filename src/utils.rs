@@ -62,7 +62,7 @@ pub fn get_workspace_config() -> Result<Config, UtilityError> {
 
   let config: Config = toml::from_str(&config_str).map_err(|_| UtilityError::InvalidConfig)?;
 
-  if config.languages.len() > 0 {
+  if config.workspace.is_none() {
     return Err(UtilityError::InvalidConfig);
   }
 

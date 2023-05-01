@@ -66,7 +66,7 @@ pub fn ls(all: bool) {
   } else {
     let config = utils::get_workspace_config().unwrap();
 
-    for (code, name) in config.links.iter() {
+    for (code, name) in config.workspace.unwrap().iter() {
       println!("{}: {}", code, name);
     }
   }
@@ -113,11 +113,27 @@ pub fn init(workspace: bool, name: String) {
   let mut batl_toml = path.clone();
   batl_toml.push("batl.toml");
 
-  let config = Config {
-    name: name.clone(),
-    languages: vec![],
-    links: HashMap::new()
-  };
+  let config: Config;
+  if workspace {
+    config = Config {
+      environment: EnvConfig {
+        min_version: env!("CARGO_PKG_VERSION").to_string()
+      },
+      workspace: Some(HashMap::new()),
+      repository: None
+    }
+  } else {
+    config = Config {
+      environment: EnvConfig {
+        min_version: env!("CARGO_PKG_VERSION").to_string()
+      },
+      workspace: None,
+      repository: Some(RepositoryConfig {
+        name: parts.last().unwrap().to_string(),
+        version: "0.0.1".to_string()
+      })
+    }
+  }
 
   utils::write_toml(&batl_toml, &config).unwrap();
 
@@ -204,7 +220,7 @@ pub fn link(name: Option<String>, repo: String) {
       std::process::exit(1);
     }
 
-    if config.links.contains_key(&name) {
+    if config.clone().workspace.unwrap().contains_key(&name) {
       println!("Link already exists: {}", name);
       std::process::exit(1);
     }
@@ -214,14 +230,18 @@ pub fn link(name: Option<String>, repo: String) {
     loop {
       repo_code = format!("r{}", utils::rand8());
 
-      if !config.links.contains_key(&repo_code) {
+      if !config.clone().workspace.unwrap().contains_key(&repo_code) {
         break;
       }
     }
   }
 
   let workspace_dir = utils::get_batl_toml_dir().unwrap();
-  config.links.insert(repo_code.clone(), repo.clone());
+  config.workspace = {
+    let mut workspace = config.workspace.unwrap();
+    workspace.insert(repo_code.clone(), repo.clone());
+    Some(workspace)
+  };
 
   utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
 
@@ -236,7 +256,7 @@ pub fn link(name: Option<String>, repo: String) {
 pub fn unlink(name: String) {
   let mut config = utils::get_workspace_config().unwrap();
 
-  match config.links.get(&name) {
+  match config.clone().workspace.unwrap().get(&name) {
     None => {
       println!("Link does not exist: {}", name);
       std::process::exit(1);
@@ -249,7 +269,11 @@ pub fn unlink(name: String) {
 
   std::fs::remove_file(&repo_base).unwrap();
 
-  config.links.remove(&name);
+  config.workspace = {
+    let mut workspace = config.workspace.unwrap();
+    workspace.remove(&name);
+    Some(workspace)
+  };
 
   utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
 
@@ -262,7 +286,7 @@ pub fn unlink(name: String) {
 pub fn run(repo: String, cmd: Vec<String>) {
   let config = utils::get_workspace_config().unwrap();
 
-  match config.links.get(&repo) {
+  match config.workspace.unwrap().get(&repo) {
     None => {
       println!("Repository not linked: {}", repo);
       std::process::exit(1);
@@ -292,7 +316,7 @@ pub fn run(repo: String, cmd: Vec<String>) {
 pub fn alias_rename(old: String, new: String) {
   let mut config = utils::get_workspace_config().unwrap();
 
-  match config.links.get(&old) {
+  match config.clone().workspace.unwrap().get(&old) {
     None => {
       println!("Repository not linked: {}", old);
       std::process::exit(1);
@@ -300,7 +324,7 @@ pub fn alias_rename(old: String, new: String) {
     Some(..) => {}
   }
 
-  match config.links.get(&new) {
+  match config.clone().workspace.unwrap().get(&new) {
     Some(..) => {
       println!("Alias already linked: {}", new);
       std::process::exit(1);
@@ -308,8 +332,13 @@ pub fn alias_rename(old: String, new: String) {
     None => {}
   }
 
-  let old_name = config.links.remove(&old).unwrap();
-  config.links.insert(new.clone(), old_name);
+  let old_name = config.clone().workspace.unwrap().remove(&old).unwrap();
+  config.workspace = {
+    let mut map = config.workspace.unwrap();
+
+    map.insert(new.clone(), old_name);
+    Some(map)
+  };
 
   let workspace_dir = utils::get_batl_toml_dir().unwrap();
   utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
