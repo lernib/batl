@@ -21,10 +21,18 @@ enum SubCli {
         workspace: bool,
         name: String
     },
+    Purge {
+        #[arg(short = 'w', long = "workspace")]
+        workspace: bool,
+        name: String
+    },
     Link {
         #[arg(short = 'n', long = "name")]
         name: Option<String>,
         repo: String
+    },
+    Unlink {
+        name: String
     },
     Run {
         #[arg(short = 'r', long = "repo")]
@@ -60,8 +68,14 @@ fn main() {
         SubCli::Init { workspace, name } => {
             commands::init(workspace, name);
         },
+        SubCli::Purge { workspace, name } => {
+            commands::purge(workspace, name);
+        },
         SubCli::Link { name, repo } => {
             commands::link(name, repo);
+        },
+        SubCli::Unlink { name } => {
+            commands::unlink(name);
         },
         SubCli::Run { repo, cmd } => {
             commands::run(repo, cmd);

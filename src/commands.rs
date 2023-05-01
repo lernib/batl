@@ -2,6 +2,7 @@ use crate::utils;
 use std::{path::PathBuf, collections::HashMap};
 use regex::Regex;
 use lazy_static::lazy_static;
+use dialoguer::Confirm;
 use crate::config::*;
 
 lazy_static! {
@@ -124,6 +125,52 @@ pub fn init(workspace: bool, name: String) {
 }
 
 /****************************************
+* purge
+****************************************/
+pub fn purge(workspace: bool, name: String) {
+  if !BATL_NAME_REGEX.is_match(&name) {
+    println!("Invalid name: {}", name);
+    return;
+  }
+
+  let batl_root = utils::get_batl_root().unwrap();
+
+  let mut batl_base: PathBuf = batl_root.clone();
+  if workspace {
+    batl_base = batl_base.join("workspaces");
+  } else {
+    batl_base = batl_base.join("repositories");
+  }
+
+  let mut path = batl_base.clone();
+  let parts: Vec<&str> = name.split("/").collect();
+
+  for part in parts.iter().take(parts.len() - 1) {
+    path = path.join(format!("@{}", part));
+  }
+  path = path.join(parts.last().unwrap());
+
+  if !path.exists() {
+    if workspace {
+      println!("Workspace does not exist: {}", name);
+    } else {
+      println!("Repository does not exist: {}", name);
+    }
+
+    std::process::exit(1);
+  }
+
+  if !Confirm::new().default(false).with_prompt(format!("Are you sure you want to purge {} {}? (there's no undo command!)", if workspace { "workspace" } else { "repository" }, name)).interact().unwrap() {
+    println!("Aborted");
+    std::process::exit(1);
+  }
+
+  std::fs::remove_dir_all(&path).unwrap();
+
+  println!("Purged {} {}", if workspace { "workspace" } else { "repository" }, name);
+}
+
+/****************************************
 * link
 ****************************************/
 pub fn link(name: Option<String>, repo: String) {
@@ -181,6 +228,32 @@ pub fn link(name: Option<String>, repo: String) {
   std::os::unix::fs::symlink(path, workspace_dir.join(&repo_code)).unwrap();
 
   println!("Linked {} to {}", repo, repo_code);
+}
+
+/****************************************
+* unlink
+****************************************/
+pub fn unlink(name: String) {
+  let mut config = utils::get_workspace_config().unwrap();
+
+  match config.links.get(&name) {
+    None => {
+      println!("Link does not exist: {}", name);
+      std::process::exit(1);
+    },
+    Some(..) => {}
+  }
+
+  let workspace_dir = utils::get_batl_toml_dir().unwrap();
+  let repo_base = workspace_dir.join(&name);
+
+  std::fs::remove_file(&repo_base).unwrap();
+
+  config.links.remove(&name);
+
+  utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
+
+  println!("Unlinked {}", name);
 }
 
 /****************************************
