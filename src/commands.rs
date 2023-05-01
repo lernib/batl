@@ -6,6 +6,7 @@ use crate::config::*;
 
 lazy_static! {
   static ref BATL_NAME_REGEX: Regex = Regex::new(r"^[a-z][a-z0-9\-_]*(/[a-z][a-z0-9\-_]*)+$").unwrap();
+  static ref BATL_LINK_REGEX: Regex = Regex::new(r"^[a-zA-Z][a-zA-Z0-9_\-]*$").unwrap();
 }
 
 /****************************************
@@ -35,9 +36,21 @@ pub fn ls(all: bool) {
             let name = path.file_name().unwrap().to_str().unwrap().to_string();
 
             if name.starts_with("@") {
-              search_dirs.push((path, format!("{}/{}", prefix, name.replace("@", ""))));
+              search_dirs.push((path, format!("{}{}{}", prefix, {
+                if prefix.len() > 0 {
+                  "/"
+                } else {
+                  ""
+                }
+              }, name.replace("@", ""))));
             } else {
-              repos.push(format!("{}/{}", prefix, name));
+              repos.push(format!("{}{}{}", prefix, {
+                if prefix.len() > 0 {
+                  "/"
+                } else {
+                  ""
+                }
+              }, name));
             }
           }
         }
@@ -113,9 +126,9 @@ pub fn init(workspace: bool, name: String) {
 /****************************************
 * link
 ****************************************/
-pub fn link(name: String) {
-  if !BATL_NAME_REGEX.is_match(&name) {
-    println!("Invalid name: {}", name);
+pub fn link(name: Option<String>, repo: String) {
+  if !BATL_NAME_REGEX.is_match(&repo) {
+    println!("Invalid repository: {}", repo);
     return;
   }
 
@@ -124,7 +137,7 @@ pub fn link(name: String) {
   let repo_base = utils::get_batl_root().unwrap().join("repositories");
 
   let mut path = repo_base.clone();
-  let parts: Vec<&str> = name.split("/").collect();
+  let parts: Vec<&str> = repo.split("/").collect();
   
   for part in parts.iter().take(parts.len() - 1) {
     path = path.join(format!("@{}", part));
@@ -132,20 +145,42 @@ pub fn link(name: String) {
   path = path.join(parts.last().unwrap());
 
   if !path.exists() {
-    println!("Repository does not exist: {}", name);
+    println!("Repository does not exist: {}", repo);
     std::process::exit(1);
   }
 
-  let repo_code = utils::rand8();
+  let mut repo_code: String;
+
+  if let Some(name) = name {
+    if !BATL_LINK_REGEX.is_match(&name) {
+      println!("Invalid link name: {}", name);
+      std::process::exit(1);
+    }
+
+    if config.links.contains_key(&name) {
+      println!("Link already exists: {}", name);
+      std::process::exit(1);
+    }
+
+    repo_code = name.clone();
+  } else {
+    loop {
+      repo_code = format!("r{}", utils::rand8());
+
+      if !config.links.contains_key(&repo_code) {
+        break;
+      }
+    }
+  }
 
   let workspace_dir = utils::get_batl_toml_dir().unwrap();
-  config.links.insert(format!("r{}", repo_code), name.clone());
+  config.links.insert(format!("r{}", repo_code), repo.clone());
 
   utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
 
-  std::os::unix::fs::symlink(path, workspace_dir.join(format!("r{}", repo_code))).unwrap();
+  std::os::unix::fs::symlink(path, workspace_dir.join(&repo_code)).unwrap();
 
-  println!("Linked {} to {}", name, format!("r{}", repo_code));
+  println!("Linked {} to {}", repo, repo_code);
 }
 
 /****************************************

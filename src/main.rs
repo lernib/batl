@@ -22,7 +22,9 @@ enum SubCli {
         name: String
     },
     Link {
-        name: String
+        #[arg(short = 'n', long = "name")]
+        name: Option<String>,
+        repo: String
     },
     Run {
         #[arg(short = 'r', long = "repo")]
@@ -58,8 +60,8 @@ fn main() {
         SubCli::Init { workspace, name } => {
             commands::init(workspace, name);
         },
-        SubCli::Link { name } => {
-            commands::link(name);
+        SubCli::Link { name, repo } => {
+            commands::link(name, repo);
         },
         SubCli::Run { repo, cmd } => {
             commands::run(repo, cmd);
