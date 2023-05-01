@@ -40,33 +40,31 @@ pub fn ls(all: bool) -> CmdResult<()> {
 
     while let Some((dir, prefix)) = search_dirs.pop() {
       if let Ok(entries) = std::fs::read_dir(dir) {
-        for entry in entries {
-          if let Ok(entry) = entry {
-            let path = entry.path();
+        for entry in entries.flatten() {
+          let path = entry.path();
 
-            if !path.is_dir() {
-              continue;
-            }
+          if !path.is_dir() {
+            continue;
+          }
 
-            let name = path.file_name().unwrap().to_str().unwrap().to_string();
+          let name = path.file_name().unwrap().to_str().unwrap().to_string();
 
-            if name.starts_with("@") {
-              search_dirs.push((path, format!("{}{}{}", prefix, {
-                if prefix.len() > 0 {
-                  "/"
-                } else {
-                  ""
-                }
-              }, name.replace("@", ""))));
-            } else {
-              repos.push(format!("{}{}{}", prefix, {
-                if prefix.len() > 0 {
-                  "/"
-                } else {
-                  ""
-                }
-              }, name));
-            }
+          if name.starts_with('@') {
+            search_dirs.push((path, format!("{}{}{}", prefix, {
+              if !prefix.is_empty() {
+                "/"
+              } else {
+                ""
+              }
+            }, name.replace('@', ""))));
+          } else {
+            repos.push(format!("{}{}{}", prefix, {
+              if !prefix.is_empty() {
+                "/"
+              } else {
+                ""
+              }
+            }, name));
           }
         }
       }
@@ -100,15 +98,15 @@ pub fn init(workspace: bool, name: String) -> CmdResult<()> {
 
   let batl_root = utils::get_batl_root()?;
 
-  let mut batl_base: PathBuf = batl_root.clone();
+  let mut batl_base: PathBuf = batl_root;
   if workspace {
     batl_base = batl_base.join("workspaces");
   } else {
     batl_base = batl_base.join("repositories");
   }
 
-  let mut path = batl_base.clone();
-  let parts: Vec<&str> = name.split("/").collect();
+  let mut path = batl_base;
+  let parts: Vec<&str> = name.split('/').collect();
   
   for part in parts.iter().take(parts.len() - 1) {
     path = path.join(format!("@{}", part));
@@ -128,12 +126,11 @@ pub fn init(workspace: bool, name: String) -> CmdResult<()> {
   std::fs::create_dir_all(&path)
     .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))?;
 
-  let mut batl_toml = path.clone();
+  let mut batl_toml = path;
   batl_toml.push("batl.toml");
 
-  let config: Config;
-  if workspace {
-    config = Config {
+  let config: Config = if workspace {
+    Config {
       environment: EnvConfig {
         min_version: env!("CARGO_PKG_VERSION").to_string()
       },
@@ -141,7 +138,7 @@ pub fn init(workspace: bool, name: String) -> CmdResult<()> {
       repository: None
     }
   } else {
-    config = Config {
+    Config {
       environment: EnvConfig {
         min_version: env!("CARGO_PKG_VERSION").to_string()
       },
@@ -151,7 +148,7 @@ pub fn init(workspace: bool, name: String) -> CmdResult<()> {
         version: "0.0.1".to_string()
       })
     }
-  }
+  };
 
   utils::write_toml(&batl_toml, &config)?;
 
@@ -170,15 +167,15 @@ pub fn purge(workspace: bool, name: String) -> CmdResult<()> {
 
   let batl_root = utils::get_batl_root()?;
 
-  let mut batl_base: PathBuf = batl_root.clone();
+  let mut batl_base: PathBuf = batl_root;
   if workspace {
     batl_base = batl_base.join("workspaces");
   } else {
     batl_base = batl_base.join("repositories");
   }
 
-  let mut path = batl_base.clone();
-  let parts: Vec<&str> = name.split("/").collect();
+  let mut path = batl_base;
+  let parts: Vec<&str> = name.split('/').collect();
 
   for part in parts.iter().take(parts.len() - 1) {
     path = path.join(format!("@{}", part));
@@ -221,8 +218,8 @@ pub fn link(name: Option<String>, repo: String) -> CmdResult<()> {
 
   let repo_base = utils::get_batl_root()?.join("repositories");
 
-  let mut path = repo_base.clone();
-  let parts: Vec<&str> = repo.split("/").collect();
+  let mut path = repo_base;
+  let parts: Vec<&str> = repo.split('/').collect();
   
   for part in parts.iter().take(parts.len() - 1) {
     path = path.join(format!("@{}", part));
@@ -247,7 +244,7 @@ pub fn link(name: Option<String>, repo: String) -> CmdResult<()> {
       std::process::exit(1);
     }
 
-    repo_code = name.clone();
+    repo_code = name;
   } else {
     loop {
       repo_code = format!("r{}", utils::rand8());
@@ -292,7 +289,7 @@ pub fn unlink(name: String) -> CmdResult<()> {
   let workspace_dir = utils::get_batl_toml_dir()?;
   let repo_base = workspace_dir.join(&name);
 
-  std::fs::remove_file(&repo_base)
+  std::fs::remove_file(repo_base)
     .map_err(|e| BatlError::UtilityError(utils::UtilityError::IoError(e)))?;
 
   config.workspace = {
@@ -346,20 +343,14 @@ pub fn run(repo: String, cmd: Vec<String>) -> CmdResult<()> {
 pub fn alias_rename(old: String, new: String) -> CmdResult<()> {
   let mut config = utils::get_workspace_config()?;
 
-  match config.clone().workspace.unwrap().get(&old) {
-    None => {
-      println!("Repository not linked: {}", old);
-      std::process::exit(1);
-    },
-    Some(..) => {}
+  if config.clone().workspace.unwrap().get(&old).is_none() {
+    println!("Repository not linked: {}", old);
+    std::process::exit(1);
   }
 
-  match config.clone().workspace.unwrap().get(&new) {
-    Some(..) => {
-      println!("Alias already linked: {}", new);
-      std::process::exit(1);
-    },
-    None => {}
+  if config.clone().workspace.unwrap().get(&new).is_some() {
+    println!("Alias already linked: {}", new);
+    std::process::exit(1);
   }
 
   let old_name = config.clone().workspace.unwrap().remove(&old).unwrap();

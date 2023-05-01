@@ -65,7 +65,7 @@ enum AliasSubCli {
 
 fn main() {
     if let Err(e) = run() {
-        eprintln!("{}", e.to_string());
+        eprintln!("{}", e);
         std::process::exit(1);
     }
 }
