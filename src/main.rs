@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, Args};
 
 mod commands;
 mod utils;
@@ -29,6 +29,22 @@ enum SubCli {
         repo: String,
         #[arg(last = true)]
         cmd: Vec<String>
+    },
+    Alias(AliasArgs)
+}
+
+#[derive(Args)]
+#[command(args_conflicts_with_subcommands = true)]
+struct AliasArgs {
+    #[command(subcommand)]
+    subcli: AliasSubCli
+}
+
+#[derive(Subcommand)]
+enum AliasSubCli {
+    Rename {
+        old: String,
+        new: String
     }
 }
 
@@ -47,6 +63,13 @@ fn main() {
         },
         SubCli::Run { repo, cmd } => {
             commands::run(repo, cmd);
+        },
+        SubCli::Alias(args) => {
+            match args.subcli {
+                AliasSubCli::Rename { old, new } => {
+                    commands::alias_rename(old, new);
+                }
+            }
         }
     }
 }

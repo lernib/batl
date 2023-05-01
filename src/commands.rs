@@ -177,3 +177,36 @@ pub fn run(repo: String, cmd: Vec<String>) {
 
   println!("Ran {} in {}", cmd_first, repo);
 }
+
+/****************************************
+* alias_rename
+****************************************/
+pub fn alias_rename(old: String, new: String) {
+  let mut config = utils::get_workspace_config().unwrap();
+
+  match config.links.get(&old) {
+    None => {
+      println!("Repository not linked: {}", old);
+      std::process::exit(1);
+    },
+    Some(..) => {}
+  }
+
+  match config.links.get(&new) {
+    Some(..) => {
+      println!("Alias already linked: {}", new);
+      std::process::exit(1);
+    },
+    None => {}
+  }
+
+  let old_name = config.links.remove(&old).unwrap();
+  config.links.insert(new.clone(), old_name);
+
+  let workspace_dir = utils::get_batl_toml_dir().unwrap();
+  utils::write_toml(&workspace_dir.join("batl.toml"), &config).unwrap();
+
+  std::fs::rename(workspace_dir.join(&old), workspace_dir.join(&new)).unwrap();
+
+  println!("Renamed {} to {}", old, new);
+}
