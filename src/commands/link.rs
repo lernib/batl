@@ -1,5 +1,6 @@
 use clap::Subcommand;
 use crate::utils::{get_workspace_config, get_batl_toml_dir, write_toml, UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root};
+use crate::output::*;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -104,7 +105,7 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 
   std::os::unix::fs::symlink(repo_root, get_batl_toml_dir()?.join(&name))?;
 
-  println!("Initialized link {} to {}", name, repo);
+  success(&format!("Initialized link {}", name));
 
   Ok(())
 }
@@ -126,7 +127,7 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 
   std::fs::remove_file(get_batl_toml_dir()?.join(&name))?;
 
-  println!("Deleted link {}", name);
+  success(&format!("Deleted link {}", name));
 
   Ok(())
 }
@@ -135,16 +136,18 @@ fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
   let workspace_config = get_workspace_config()?;
 
   let links = workspace_config.workspace.unwrap();
-
-  let link = links.get(&name).ok_or(UtilityError::LinkNotFound)?;
   
+  links.get(&name).ok_or(UtilityError::LinkNotFound)?;
+
+  info(&format!("Running command for link {}\n", name));
+
   std::process::Command::new(args.first().unwrap())
     .current_dir(get_batl_toml_dir()?.join(&name))
     .args(args.iter().skip(1))
     .status()?;
 
-
-  println!("Ran command successfully");
+  println!("");
+  success("Command completed successfully");
 
   Ok(())
 }

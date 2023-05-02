@@ -3,6 +3,7 @@ use clap::{Parser, Subcommand, Args};
 mod commands;
 mod utils;
 mod config;
+mod output;
 
 #[derive(Parser)]
 #[command(name = "batl")]
@@ -27,6 +28,7 @@ struct SubCmdArgs<T: Subcommand> {
     subcmd: T
 }
 
+
 fn main() {
     let cli = Cli::parse();
 
@@ -35,28 +37,28 @@ fn main() {
             let result = commands::workspace::run(args.subcmd);
 
             if let Err(err) = result {
-                println!("Error: {}", err);
+                output::error(err.to_string().as_str());
             }
         },
         SubCommand::Link(args) => {
             let result = commands::link::run(args.subcmd);
 
             if let Err(err) = result {
-                println!("Error: {}", err);
+                output::error(err.to_string().as_str());
             }
         },
         SubCommand::Repository(args) => {
             let result = commands::repository::run(args.subcmd);
 
             if let Err(err) = result {
-                println!("Error: {}", err);
+                output::error(err.to_string().as_str());
             }
         },
         SubCommand::Setup => {
             let result = commands::cmd_setup();
 
             if let Err(err) = result {
-                println!("Error: {}", err);
+                output::error(err.to_string().as_str());
             }
         }
     }

@@ -1,6 +1,7 @@
 use clap::Subcommand;
 use crate::utils::{get_batl_root, UtilityError, BATL_NAME_REGEX, write_toml};
 use crate::config::*;
+use crate::output::*;
 use std::path::PathBuf;
 
 #[derive(Subcommand)]
@@ -103,7 +104,7 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 
   write_toml(&path.join("batl.toml"), &config)?;
 
-  println!("Initialized repository successfully");
+  success("Initialized repository successfully");
 
   Ok(())
 }
@@ -130,7 +131,7 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 
   std::fs::remove_dir_all(path)?;
 
-  println!("Deleted repository successfully");
+  success("Deleted repository successfully");
 
   Ok(())
 }

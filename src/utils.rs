@@ -71,14 +71,6 @@ pub fn write_toml<T: serde::Serialize>(path: &PathBuf, data: &T) -> Result<(), U
   Ok(())
 }
 
-pub fn write_string(path: &PathBuf, data: &str) -> Result<(), UtilityError> {
-  let mut file = std::fs::File::create(path)?;
-
-  file.write_all(data.as_bytes())?;
-
-  Ok(())
-}
-
 pub fn get_workspace_config() -> Result<Config, UtilityError> {
   let batl_toml_path = get_batl_toml_dir()?.join("batl.toml");
 
@@ -87,20 +79,6 @@ pub fn get_workspace_config() -> Result<Config, UtilityError> {
   let config: Config = toml::from_str(&config_str).map_err(|_| UtilityError::InvalidConfig)?;
 
   if config.workspace.is_none() {
-    return Err(UtilityError::InvalidConfig);
-  }
-
-  Ok(config)
-}
-
-pub fn get_repo_config(path: &PathBuf) -> Result<Config, UtilityError> {
-  let batl_toml_path = path.join("batl.toml");
-
-  let config_str = std::fs::read_to_string(batl_toml_path)?;
-
-  let config: Config = toml::from_str(&config_str).map_err(|_| UtilityError::InvalidConfig)?;
-
-  if config.repository.is_none() {
     return Err(UtilityError::InvalidConfig);
   }
 
@@ -121,9 +99,4 @@ pub fn get_batl_toml_dir() -> Result<PathBuf, UtilityError> {
       break Err(UtilityError::ResourceDoesNotExist("Workspace config".to_string()));
     }
   }
-}
-
-pub fn rand8() -> String {
-  let random_num: u64 = rand::random();
-  format!("{:x}", random_num)[..8].to_string()
 }

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use clap::Subcommand;
 use crate::utils::{get_batl_root, write_toml, UtilityError, BATL_NAME_REGEX};
 use crate::config::*;
+use crate::output::*;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -101,7 +102,7 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 
   write_toml(&batl_toml_path, &config)?;
 
-  println!("Workspace {} created", name);
+  success(&format!("Workspace {} initialized", name));
 
   Ok(())
 }
@@ -127,7 +128,7 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 
   std::fs::remove_dir_all(path)?;
 
-  println!("Workspace {} deleted", name);
+  success(&format!("Workspace {} deleted", name));
 
   Ok(())
 }
