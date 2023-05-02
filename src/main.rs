@@ -4,6 +4,7 @@ mod commands;
 mod utils;
 mod config;
 mod output;
+mod runtime;
 
 #[derive(Parser)]
 #[command(name = "batl")]

@@ -170,6 +170,8 @@ fn cmd_build(name: String) -> Result<(), UtilityError> {
   links.get(&name).ok_or(UtilityError::LinkNotFound)?;
 
   let link_dir = get_batl_toml_dir()?.join(&name);
+  // link_dir is a symlink, resolve it
+  let link_dir = std::fs::read_link(link_dir)?;
 
   let repository_config = get_repository_config(&link_dir)?;
   let build_script = repository_config.repository.unwrap().build;
