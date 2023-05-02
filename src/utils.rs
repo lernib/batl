@@ -27,7 +27,9 @@ pub enum UtilityError {
   #[error("Link not found")]
   LinkNotFound,
   #[error("Invalid name: {0}")]
-  InvalidName(String)
+  InvalidName(String),
+  #[error("Already setup")]
+  AlreadySetup,
 }
 
 pub fn get_batl_root() -> Result<PathBuf, UtilityError> {

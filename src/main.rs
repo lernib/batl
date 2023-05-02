@@ -17,7 +17,8 @@ struct Cli {
 enum SubCommand {
     Workspace(SubCmdArgs<commands::workspace::Commands>),
     Link(SubCmdArgs<commands::link::Commands>),
-    Repository(SubCmdArgs<commands::repository::Commands>)
+    Repository(SubCmdArgs<commands::repository::Commands>),
+    Setup
 }
 
 #[derive(Args)]
@@ -46,6 +47,13 @@ fn main() {
         },
         SubCommand::Repository(args) => {
             let result = commands::repository::run(args.subcmd);
+
+            if let Err(err) = result {
+                println!("Error: {}", err);
+            }
+        },
+        SubCommand::Setup => {
+            let result = commands::cmd_setup();
 
             if let Err(err) = result {
                 println!("Error: {}", err);
