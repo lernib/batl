@@ -1,10 +1,18 @@
 use crate::config::Config;
 use thiserror::Error;
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::{
   path::PathBuf,
   env::var,
   io::Write
 };
+
+
+lazy_static! {
+  pub static ref BATL_NAME_REGEX: Regex = Regex::new(r"^[a-z][a-z0-9\-_]*(/[a-z][a-z0-9\-_]*)+$").unwrap();
+  pub static ref BATL_LINK_REGEX: Regex = Regex::new(r"^[a-zA-Z][a-zA-Z0-9_\-]*$").unwrap();
+}
 
 #[derive(Error, Debug)]
 pub enum UtilityError {
@@ -12,8 +20,14 @@ pub enum UtilityError {
   IoError(#[from] std::io::Error),
   #[error("Resource does not exist: {0}")]
   ResourceDoesNotExist(String),
+  #[error("Resource already exists: {0}")]
+  ResourceAlreadyExists(String),
   #[error("Invalid config")]
-  InvalidConfig
+  InvalidConfig,
+  #[error("Link not found")]
+  LinkNotFound,
+  #[error("Invalid name: {0}")]
+  InvalidName(String)
 }
 
 pub fn get_batl_root() -> Result<PathBuf, UtilityError> {
