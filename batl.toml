@@ -1,0 +1,7 @@
+[environment]
+version = "0.1.0"
+
+[repository]
+name = "batl-cli"
+version = "0.1.0"
+build = "ls"
