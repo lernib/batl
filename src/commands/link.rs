@@ -24,9 +24,6 @@ pub enum Commands {
     name: String,
     #[arg(last = true)]
     args: Vec<String>
-  },
-  Build {
-    name: String
   }
 }
 
@@ -46,9 +43,6 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
     },
     Commands::Run { name, args } => {
       cmd_run(name, args)
-    },
-    Commands::Build { name } => {
-      cmd_build(name)
     }
   }
 }
@@ -158,34 +152,6 @@ fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
 
   println!("");
   success("Command completed successfully");
-
-  Ok(())
-}
-
-fn cmd_build(name: String) -> Result<(), UtilityError> {
-  let workspace_config = get_workspace_config()?;
-
-  let links = workspace_config.workspace.unwrap();
-  
-  links.get(&name).ok_or(UtilityError::LinkNotFound)?;
-
-  let link_dir = get_batl_toml_dir()?.join(&name);
-  // link_dir is a symlink, resolve it
-  let link_dir = std::fs::read_link(link_dir)?;
-
-  let repository_config = get_repository_config(&link_dir)?;
-  let build_script = repository_config.repository.unwrap().build;
-
-  info(&format!("Building link {}\n", name));
-
-  std::process::Command::new("sh")
-    .current_dir(link_dir)
-    .arg("-c")
-    .arg(build_script)
-    .status()?;
-
-  println!("");
-  success("Build completed successfully");
 
   Ok(())
 }

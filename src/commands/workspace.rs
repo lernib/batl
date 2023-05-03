@@ -103,7 +103,8 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
       version: env!("CARGO_PKG_VERSION").to_string(),
     },
     workspace: Some(HashMap::new()),
-    repository: None
+    repository: None,
+    scripts: None
   };
 
   write_toml(&batl_toml_path, &config)?;
