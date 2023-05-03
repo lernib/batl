@@ -29,7 +29,11 @@ pub enum UtilityError {
   #[error("Invalid name: {0}")]
   InvalidName(String),
   #[error("Already setup")]
-  AlreadySetup
+  AlreadySetup,
+  #[error("No scripts found")]
+  NoScripts,
+  #[error("Script not found: {0}")]
+  ScriptNotFound(String)
 }
 
 pub fn get_batl_root() -> Result<PathBuf, UtilityError> {
