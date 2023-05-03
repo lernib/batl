@@ -12,7 +12,6 @@ dialoguer = "0.10.4"
 lazy_static = "1.4.0"
 rand = "0.8.5"
 regex = "1.8.1"
-rlua = "0.19.4"
 serde = { version = "1.0.160", features = ["derive"] }
 thiserror = "1.0.40"
 toml = "0.7.3"
