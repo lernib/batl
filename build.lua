@@ -1,1 +1,0 @@
-shell("cargo build")

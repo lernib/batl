@@ -2,7 +2,6 @@ use clap::Subcommand;
 use crate::utils::{get_batl_root, UtilityError, BATL_NAME_REGEX, write_toml, get_batl_toml_dir, get_repository_config};
 use crate::config::*;
 use crate::output::*;
-use crate::runtime::Runtime;
 use std::path::PathBuf;
 
 #[derive(Subcommand)]
@@ -13,9 +12,6 @@ pub enum Commands {
   },
   Delete {
     name: String
-  },
-  Exec {
-    script: String
   }
 }
 
@@ -29,9 +25,6 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
     },
     Commands::Delete { name } => {
       cmd_delete(name)
-    },
-    Commands::Exec { script } => {
-      cmd_exec(script)
     }
   }
 }
@@ -139,17 +132,6 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
   std::fs::remove_dir_all(path)?;
 
   success("Deleted repository successfully");
-
-  Ok(())
-}
-
-fn cmd_exec(script: String) -> Result<(), UtilityError> {
-  let current_dir = std::env::current_dir()?;
-  
-  get_repository_config(&current_dir)?;
-
-  let mut runtime = Runtime::new()?;
-  runtime.exec_file(&PathBuf::from(script))?;
 
   Ok(())
 }
