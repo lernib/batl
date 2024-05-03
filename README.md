@@ -5,7 +5,7 @@ Battalion is a CLI tool for managing codebase relationships. It uses a simple he
 ## Installation
 
 ```bash
-cargo install --git https://github.com/carlosskii/batl
+cargo install --git https://github.com/frqubit/batl
 batl setup
 ```
 
