@@ -30,6 +30,10 @@ pub enum UtilityError {
   InvalidName(String),
   #[error("Already setup")]
   AlreadySetup,
+  #[error("No scripts found")]
+  NoScripts,
+  #[error("Script not found: {0}")]
+  ScriptNotFound(String)
 }
 
 pub fn get_batl_root() -> Result<PathBuf, UtilityError> {
@@ -79,6 +83,20 @@ pub fn get_workspace_config() -> Result<Config, UtilityError> {
   let config: Config = toml::from_str(&config_str).map_err(|_| UtilityError::InvalidConfig)?;
 
   if config.workspace.is_none() {
+    return Err(UtilityError::InvalidConfig);
+  }
+
+  Ok(config)
+}
+
+pub fn get_repository_config(path: &PathBuf) -> Result<Config, UtilityError> {
+  let batl_toml_path = path.join("batl.toml");
+
+  let config_str = std::fs::read_to_string(batl_toml_path)?;
+
+  let config: Config = toml::from_str(&config_str).map_err(|_| UtilityError::InvalidConfig)?;
+
+  if config.repository.is_none() {
     return Err(UtilityError::InvalidConfig);
   }
 

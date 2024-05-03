@@ -2,6 +2,7 @@ use clap::Subcommand;
 use crate::utils::{get_batl_root, UtilityError, BATL_NAME_REGEX, write_toml};
 use crate::config::*;
 use crate::output::*;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Subcommand)]
@@ -90,6 +91,9 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 
   std::fs::create_dir_all(&path)?;
 
+  let mut scripts = HashMap::new();
+  scripts.insert("build".to_string(), "echo \"No build targets\" && exit 1".to_string());
+
   let config = Config {
     environment: EnvConfig {
       version: env!("CARGO_PKG_VERSION").to_string(),
@@ -98,8 +102,9 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
     repository: Some(RepositoryConfig {
       name: parts.last().unwrap().to_string(),
       version: "0.1.0".to_string(),
-      build: "echo \"No build script\" && exit 1".to_string()
-    })
+      build: None
+    }),
+    scripts: Some(scripts)
   };
 
   write_toml(&path.join("batl.toml"), &config)?;

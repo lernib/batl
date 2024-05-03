@@ -1,5 +1,9 @@
 use clap::Subcommand;
-use crate::utils::{get_workspace_config, get_batl_toml_dir, write_toml, UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root};
+use crate::utils::{
+  get_workspace_config, get_batl_toml_dir, write_toml,
+  UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root,
+  get_repository_config
+};
 use crate::output::*;
 
 #[derive(Subcommand)]
@@ -20,6 +24,10 @@ pub enum Commands {
     name: String,
     #[arg(last = true)]
     args: Vec<String>
+  },
+  Exec {
+    name: String,
+    script: String
   }
 }
 
@@ -39,6 +47,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
     },
     Commands::Run { name, args } => {
       cmd_run(name, args)
+    },
+    Commands::Exec { name, script } => {
+      cmd_exec(name, script)
     }
   }
 }
@@ -148,6 +159,40 @@ fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
 
   println!("");
   success("Command completed successfully");
+
+  Ok(())
+}
+
+fn cmd_exec(name: String, script: String) -> Result<(), UtilityError> {
+  let workspace_config = get_workspace_config()?;
+
+  let links = workspace_config.workspace.unwrap();
+  
+  links.get(&name).ok_or(UtilityError::LinkNotFound)?;
+
+  let repository_config = get_repository_config(
+    &get_batl_toml_dir()?.join(&name)
+  )?;
+
+  let scripts = match repository_config.scripts {
+    Some(scripts) => scripts,
+    None => return Err(UtilityError::NoScripts)
+  };
+
+  if !scripts.contains_key(&script) {
+    return Err(UtilityError::ScriptNotFound(script));
+  }
+
+  info(&format!("Running script for link {}\n", name));
+
+  std::process::Command::new("sh")
+    .current_dir(get_batl_toml_dir()?.join(&name))
+    .arg("-c")
+    .arg(scripts.get(&script).unwrap())
+    .status()?;
+
+  println!("");
+  success("Script completed successfully");
 
   Ok(())
 }

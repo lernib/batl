@@ -5,7 +5,6 @@ pub mod workspace;
 pub mod link;
 pub mod repository;
 
-
 pub fn cmd_setup() -> Result<(), UtilityError> {
   if !get_batl_root().is_err() {
     return Err(UtilityError::AlreadySetup);

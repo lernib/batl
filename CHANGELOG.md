@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0] - Unreleased
+
+### Changed
+
+- Configuration format
+  - `repository.build` -> `scripts`
+
 ## [0.1.0] - 2023-05-02
 
 ### Added
