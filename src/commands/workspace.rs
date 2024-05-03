@@ -14,6 +14,9 @@ pub enum Commands {
   },
   Delete {
     name: String
+  },
+  Which {
+    name: String
   }
 }
 
@@ -27,6 +30,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
     },
     Commands::Delete { name } => {
       cmd_delete(name)
+    },
+    Commands::Which { name } => {
+      cmd_which(name)
     }
   }
 }
@@ -129,6 +135,30 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
   std::fs::remove_dir_all(path)?;
 
   success(&format!("Workspace {} deleted", name));
+
+  Ok(())
+}
+
+fn cmd_which(name: String) -> Result<(), UtilityError> {
+  if !BATL_NAME_REGEX.is_match(&name) {
+    return Err(UtilityError::InvalidName(name));
+  }
+
+  let workspace_root = get_batl_root()?.join("workspaces");
+
+  let parts = name.split('/').collect::<Vec<&str>>();
+  let mut path = workspace_root;
+
+  for part in parts.iter().take(parts.len() - 1) {
+    path = path.join(format!("@{}", part));
+  }
+  path = path.join(parts.last().unwrap());
+
+  if !path.exists() {
+    return Err(UtilityError::ResourceDoesNotExist(format!("Workspace {}", name)));
+  }
+
+  println!("{}", path.to_string_lossy());
 
   Ok(())
 }
