@@ -185,11 +185,16 @@ fn cmd_exec(name: String, script: String) -> Result<(), UtilityError> {
 
 	info(&format!("Running script for link {}\n", name));
 
-	std::process::Command::new("sh")
+	let status = std::process::Command::new("sh")
 		.current_dir(get_batl_toml_dir()?.join(&name))
 		.arg("-c")
 		.arg(scripts.get(&script).unwrap())
 		.status()?;
+
+
+	if !status.success() {
+		return Err(UtilityError::ScriptError(format!("Exit code {}", status.code().unwrap_or(0))))
+	}
 
 	println!("");
 	success("Script completed successfully");

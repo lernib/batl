@@ -33,7 +33,9 @@ pub enum UtilityError {
 	#[error("No scripts found")]
 	NoScripts,
 	#[error("Script not found: {0}")]
-	ScriptNotFound(String)
+	ScriptNotFound(String),
+	#[error("Script error: {0}")]
+	ScriptError(String)
 }
 
 pub fn get_batl_root() -> Result<PathBuf, UtilityError> {
