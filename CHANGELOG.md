@@ -6,6 +6,9 @@
 
 - Configuration format
   - `repository.build` -> `scripts`
+- Commands
+	- `workspace cd`
+	- `workspace which`
 
 ## [0.1.0] - 2023-05-02
 

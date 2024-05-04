@@ -1,198 +1,198 @@
 use clap::Subcommand;
 use crate::utils::{
-  get_workspace_config, get_batl_toml_dir, write_toml,
-  UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root,
-  get_repository_config
+	get_workspace_config, get_batl_toml_dir, write_toml,
+	UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root,
+	get_repository_config
 };
 use crate::output::*;
 
 #[derive(Subcommand)]
 pub enum Commands {
-  Ls,
-  Stats {
-    name: String
-  },
-  Init {
-    #[arg(short = 'n', long = "name")]
-    name: Option<String>,
-    repo: String
-  },
-  Delete {
-    name: String
-  },
-  Run {
-    name: String,
-    #[arg(last = true)]
-    args: Vec<String>
-  },
-  Exec {
-    name: String,
-    script: String
-  }
+	Ls,
+	Stats {
+		name: String
+	},
+	Init {
+		#[arg(short = 'n', long = "name")]
+		name: Option<String>,
+		repo: String
+	},
+	Delete {
+		name: String
+	},
+	Run {
+		name: String,
+		#[arg(last = true)]
+		args: Vec<String>
+	},
+	Exec {
+		name: String,
+		script: String
+	}
 }
 
 pub fn run(cmd: Commands) -> Result<(), UtilityError> {
-  match cmd {
-    Commands::Ls => {
-      cmd_ls()
-    },
-    Commands::Stats { name } => {
-      cmd_stats(name)
-    },
-    Commands::Init { name, repo } => {
-      cmd_init(name, repo)
-    },
-    Commands::Delete { name } => {
-      cmd_delete(name)
-    },
-    Commands::Run { name, args } => {
-      cmd_run(name, args)
-    },
-    Commands::Exec { name, script } => {
-      cmd_exec(name, script)
-    }
-  }
+	match cmd {
+		Commands::Ls => {
+			cmd_ls()
+		},
+		Commands::Stats { name } => {
+			cmd_stats(name)
+		},
+		Commands::Init { name, repo } => {
+			cmd_init(name, repo)
+		},
+		Commands::Delete { name } => {
+			cmd_delete(name)
+		},
+		Commands::Run { name, args } => {
+			cmd_run(name, args)
+		},
+		Commands::Exec { name, script } => {
+			cmd_exec(name, script)
+		}
+	}
 }
 
 fn cmd_ls() -> Result<(), UtilityError> {
-  let workspace_config = get_workspace_config()?;
+	let workspace_config = get_workspace_config()?;
 
-  let links = workspace_config.workspace.unwrap();
+	let links = workspace_config.workspace.unwrap();
 
-  for link in links {
-    println!("{}:\t\t{}", link.0, link.1);
-  }
+	for link in links {
+		println!("{}:\t\t{}", link.0, link.1);
+	}
 
-  Ok(())
+	Ok(())
 }
 
 fn cmd_stats(name: String) -> Result<(), UtilityError> {
-  let workspace_config = get_workspace_config()?;
+	let workspace_config = get_workspace_config()?;
 
-  let links = workspace_config.workspace.unwrap();
+	let links = workspace_config.workspace.unwrap();
 
-  let link = links.get(&name).ok_or(UtilityError::LinkNotFound)?;
+	let link = links.get(&name).ok_or(UtilityError::LinkNotFound)?;
 
-  println!("Link: {}", name);
-  println!("Repository: {}", link);
+	println!("Link: {}", name);
+	println!("Repository: {}", link);
 
-  Ok(())
+	Ok(())
 }
 
 fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
-  if !BATL_NAME_REGEX.is_match(&repo) {
-    return Err(UtilityError::InvalidName(repo));
-  }
+	if !BATL_NAME_REGEX.is_match(&repo) {
+		return Err(UtilityError::InvalidName(repo));
+	}
 
-  // TODO: Make random string
-  let name = name.unwrap_or_else(|| unimplemented!());
+	// TODO: Make random string
+	let name = name.unwrap_or_else(|| unimplemented!());
 
-  if !BATL_LINK_REGEX.is_match(&name) {
-    return Err(UtilityError::InvalidName(name));
-  }
+	if !BATL_LINK_REGEX.is_match(&name) {
+		return Err(UtilityError::InvalidName(name));
+	}
 
-  let parts = repo.split("/").collect::<Vec<&str>>();
-  let mut repo_root = get_batl_root()?.join("repositories");
+	let parts = repo.split("/").collect::<Vec<&str>>();
+	let mut repo_root = get_batl_root()?.join("repositories");
 
-  for part in parts.iter().take(parts.len() - 1) {
-    repo_root.push(format!("@{}", part));
-  }
+	for part in parts.iter().take(parts.len() - 1) {
+		repo_root.push(format!("@{}", part));
+	}
 
-  repo_root.push(parts.last().unwrap());
+	repo_root.push(parts.last().unwrap());
 
-  let mut workspace_config = get_workspace_config()?;
+	let mut workspace_config = get_workspace_config()?;
 
-  let mut links = workspace_config.workspace.unwrap();
+	let mut links = workspace_config.workspace.unwrap();
 
-  if links.contains_key(&name) {
-    return Err(UtilityError::ResourceAlreadyExists(format!("Link {}", name)));
-  }
+	if links.contains_key(&name) {
+		return Err(UtilityError::ResourceAlreadyExists(format!("Link {}", name)));
+	}
 
-  links.insert(name.clone(), repo.clone());
+	links.insert(name.clone(), repo.clone());
 
-  workspace_config.workspace = Some(links);
+	workspace_config.workspace = Some(links);
 
-  write_toml(&get_batl_toml_dir()?.join("batl.toml"), &workspace_config)?;
+	write_toml(&get_batl_toml_dir()?.join("batl.toml"), &workspace_config)?;
 
-  std::os::unix::fs::symlink(repo_root, get_batl_toml_dir()?.join(&name))?;
+	std::os::unix::fs::symlink(repo_root, get_batl_toml_dir()?.join(&name))?;
 
-  success(&format!("Initialized link {}", name));
+	success(&format!("Initialized link {}", name));
 
-  Ok(())
+	Ok(())
 }
 
 fn cmd_delete(name: String) -> Result<(), UtilityError> {
-  let mut workspace_config = get_workspace_config()?;
+	let mut workspace_config = get_workspace_config()?;
 
-  let mut links = workspace_config.workspace.unwrap();
+	let mut links = workspace_config.workspace.unwrap();
 
-  if !links.contains_key(&name) {
-    return Err(UtilityError::LinkNotFound);
-  }
+	if !links.contains_key(&name) {
+		return Err(UtilityError::LinkNotFound);
+	}
 
-  links.remove(&name);
+	links.remove(&name);
 
-  workspace_config.workspace = Some(links);
+	workspace_config.workspace = Some(links);
 
-  write_toml(&get_batl_toml_dir()?.join("batl.toml"), &workspace_config)?;
+	write_toml(&get_batl_toml_dir()?.join("batl.toml"), &workspace_config)?;
 
-  std::fs::remove_file(get_batl_toml_dir()?.join(&name))?;
+	std::fs::remove_file(get_batl_toml_dir()?.join(&name))?;
 
-  success(&format!("Deleted link {}", name));
+	success(&format!("Deleted link {}", name));
 
-  Ok(())
+	Ok(())
 }
 
 fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
-  let workspace_config = get_workspace_config()?;
+	let workspace_config = get_workspace_config()?;
 
-  let links = workspace_config.workspace.unwrap();
-  
-  links.get(&name).ok_or(UtilityError::LinkNotFound)?;
+	let links = workspace_config.workspace.unwrap();
+	
+	links.get(&name).ok_or(UtilityError::LinkNotFound)?;
 
-  info(&format!("Running command for link {}\n", name));
+	info(&format!("Running command for link {}\n", name));
 
-  std::process::Command::new(args.first().unwrap())
-    .current_dir(get_batl_toml_dir()?.join(&name))
-    .args(args.iter().skip(1))
-    .status()?;
+	std::process::Command::new(args.first().unwrap())
+		.current_dir(get_batl_toml_dir()?.join(&name))
+		.args(args.iter().skip(1))
+		.status()?;
 
-  println!("");
-  success("Command completed successfully");
+	println!("");
+	success("Command completed successfully");
 
-  Ok(())
+	Ok(())
 }
 
 fn cmd_exec(name: String, script: String) -> Result<(), UtilityError> {
-  let workspace_config = get_workspace_config()?;
+	let workspace_config = get_workspace_config()?;
 
-  let links = workspace_config.workspace.unwrap();
-  
-  links.get(&name).ok_or(UtilityError::LinkNotFound)?;
+	let links = workspace_config.workspace.unwrap();
+	
+	links.get(&name).ok_or(UtilityError::LinkNotFound)?;
 
-  let repository_config = get_repository_config(
-    &get_batl_toml_dir()?.join(&name)
-  )?;
+	let repository_config = get_repository_config(
+		&get_batl_toml_dir()?.join(&name)
+	)?;
 
-  let scripts = match repository_config.scripts {
-    Some(scripts) => scripts,
-    None => return Err(UtilityError::NoScripts)
-  };
+	let scripts = match repository_config.scripts {
+		Some(scripts) => scripts,
+		None => return Err(UtilityError::NoScripts)
+	};
 
-  if !scripts.contains_key(&script) {
-    return Err(UtilityError::ScriptNotFound(script));
-  }
+	if !scripts.contains_key(&script) {
+		return Err(UtilityError::ScriptNotFound(script));
+	}
 
-  info(&format!("Running script for link {}\n", name));
+	info(&format!("Running script for link {}\n", name));
 
-  std::process::Command::new("sh")
-    .current_dir(get_batl_toml_dir()?.join(&name))
-    .arg("-c")
-    .arg(scripts.get(&script).unwrap())
-    .status()?;
+	std::process::Command::new("sh")
+		.current_dir(get_batl_toml_dir()?.join(&name))
+		.arg("-c")
+		.arg(scripts.get(&script).unwrap())
+		.status()?;
 
-  println!("");
-  success("Script completed successfully");
+	println!("");
+	success("Script completed successfully");
 
-  Ok(())
+	Ok(())
 }
