@@ -1,9 +1,10 @@
 use clap::{Parser, Subcommand, Args};
 
 mod commands;
-mod utils;
 mod config;
+mod env;
 mod output;
+mod utils;
 
 #[derive(Parser)]
 #[command(name = "batl")]

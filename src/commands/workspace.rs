@@ -2,9 +2,10 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use clap::Subcommand;
-use crate::utils::{get_batl_root, write_toml, UtilityError, BATL_NAME_REGEX};
 use crate::config::*;
+use crate::env::System;
 use crate::output::*;
+use crate::utils::{write_toml, UtilityError, BATL_NAME_REGEX};
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -44,7 +45,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 }
 
 fn cmd_ls() -> Result<(), UtilityError> {
-	let workspace_root = get_batl_root()?.join("workspaces");
+	let workspace_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("workspaces");
 
 	let mut to_search: Vec<(String, PathBuf)> = std::fs::read_dir(workspace_root)?
 		.filter_map(|entry| {
@@ -87,7 +90,9 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = get_batl_root()?.join("workspaces");
+	let workspace_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("workspaces");
 
 	let parts = name.split('/').collect::<Vec<&str>>();
 	let mut path = workspace_root;
@@ -125,7 +130,9 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = get_batl_root()?.join("workspaces");
+	let workspace_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("workspaces");
 
 	let parts = name.split('/').collect::<Vec<&str>>();
 	let mut path = workspace_root;
@@ -151,7 +158,9 @@ fn cmd_cd(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = get_batl_root()?.join("workspaces");
+	let workspace_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("workspaces");
 
 	let parts = name.split('/').collect::<Vec<&str>>();
 	let mut path = workspace_root;
@@ -177,7 +186,9 @@ fn cmd_which(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = get_batl_root()?.join("workspaces");
+	let workspace_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("workspaces");
 
 	let parts = name.split('/').collect::<Vec<&str>>();
 	let mut path = workspace_root;

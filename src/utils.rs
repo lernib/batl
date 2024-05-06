@@ -1,9 +1,8 @@
 use thiserror::Error;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::env::var;
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 
 lazy_static! {
@@ -33,37 +32,6 @@ pub enum UtilityError {
 	ScriptNotFound(String),
 	#[error("Script error: {0}")]
 	ScriptError(String)
-}
-
-pub fn get_batl_root() -> Result<PathBuf, UtilityError> {
-	// 1. Check BATL_ROOT environment variable
-	if let Ok(batl_root) = var("BATL_ROOT") {
-		return Ok(PathBuf::from(batl_root));
-	}
-
-	// 2. Recursively descend from current directory until .batlrc is found
-	let mut current_dir = std::env::current_dir()?;
-
-	loop {
-		if current_dir.join(".batlrc").exists() {
-			return Ok(current_dir);
-		}
-
-		if !current_dir.pop() {
-			break;
-		}
-	}
-
-	// 3. Check for battalion folder in home directory
-	if let Ok(home_dir) = var("HOME") {
-		let batl_dir = PathBuf::from(home_dir).join("battalion");
-
-		if batl_dir.exists() {
-			return Ok(batl_dir);
-		}
-	}
-
-	Err(UtilityError::ResourceDoesNotExist("Battalion root directory".to_string()))
 }
 
 pub fn write_toml<T: serde::Serialize>(path: &Path, data: &T) -> Result<(), UtilityError> {

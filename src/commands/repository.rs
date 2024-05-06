@@ -1,7 +1,8 @@
 use clap::Subcommand;
-use crate::utils::{get_batl_root, UtilityError, BATL_NAME_REGEX, write_toml};
 use crate::config::*;
+use crate::env::System;
 use crate::output::*;
+use crate::utils::{UtilityError, BATL_NAME_REGEX, write_toml};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -31,7 +32,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 }
 
 fn cmd_ls() -> Result<(), UtilityError> {
-	let repo_root = get_batl_root()?.join("repositories");
+	let repo_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("repositories");
 
 	let mut to_search: Vec<(String, PathBuf)> = std::fs::read_dir(repo_root)?
 		.filter_map(|entry| {
@@ -74,7 +77,9 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let repo_root = get_batl_root()?.join("repositories");
+	let repo_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("repositories");
 
 	let mut path = repo_root;
 	let parts = name.split('/').collect::<Vec<&str>>();
@@ -119,7 +124,9 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let repo_root = get_batl_root()?.join("repositories");
+	let repo_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("repositories");
 
 	let mut path = repo_root;
 	let parts = name.split('/').collect::<Vec<&str>>();

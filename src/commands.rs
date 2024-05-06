@@ -1,4 +1,5 @@
-use crate::utils::{UtilityError, get_batl_root};
+use crate::env::System;
+use crate::utils::UtilityError;
 use std::{path::PathBuf, env};
 
 pub mod workspace;
@@ -6,7 +7,7 @@ pub mod link;
 pub mod repository;
 
 pub fn cmd_setup() -> Result<(), UtilityError> {
-	if !get_batl_root().is_err() {
+	if System::batl_root().is_some() {
 		return Err(UtilityError::AlreadySetup);
 	}
 

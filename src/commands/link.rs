@@ -1,8 +1,9 @@
 use clap::Subcommand;
 use crate::config::Config;
+use crate::env::System;
 use crate::utils::{
 	write_toml,
-	UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root
+	UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX
 };
 use crate::output::*;
 use std::env::current_dir;
@@ -97,7 +98,9 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 	}
 
 	let parts = repo.split("/").collect::<Vec<&str>>();
-	let mut repo_root = get_batl_root()?.join("repositories");
+	let mut repo_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.join("repositories");
 
 	for part in parts.iter().take(parts.len() - 1) {
 		repo_root.push(format!("@{}", part));
