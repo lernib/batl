@@ -37,4 +37,12 @@ impl System {
 
 		None
 	}
+
+	pub fn workspace_root() -> Option<PathBuf> {
+		Self::batl_root().map(|p| p.join("workspaces"))
+	}
+
+	pub fn repository_root() -> Option<PathBuf> {
+		Self::batl_root().map(|p| p.join("repositories"))
+	}
 }

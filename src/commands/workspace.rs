@@ -45,9 +45,8 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 }
 
 fn cmd_ls() -> Result<(), UtilityError> {
-	let workspace_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("workspaces");
+	let workspace_root = System::workspace_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
 
 	let mut to_search: Vec<(String, PathBuf)> = std::fs::read_dir(workspace_root)?
 		.filter_map(|entry| {
@@ -90,9 +89,8 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("workspaces");
+	let workspace_root = System::workspace_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
 
 	let parts = name.split('/').collect::<Vec<&str>>();
 	let mut path = workspace_root;
@@ -130,9 +128,8 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("workspaces");
+	let workspace_root = System::workspace_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
 
 	let parts = name.split('/').collect::<Vec<&str>>();
 	let mut path = workspace_root;
@@ -158,9 +155,8 @@ fn cmd_cd(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("workspaces");
+	let workspace_root = System::workspace_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
 
 	let parts = name.split('/').collect::<Vec<&str>>();
 	let mut path = workspace_root;
@@ -186,9 +182,8 @@ fn cmd_which(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("workspaces");
+	let workspace_root = System::workspace_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
 
 	let parts = name.split('/').collect::<Vec<&str>>();
 	let mut path = workspace_root;

@@ -98,9 +98,8 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 	}
 
 	let parts = repo.split("/").collect::<Vec<&str>>();
-	let mut repo_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("repositories");
+	let mut repo_root = System::repository_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
 
 	for part in parts.iter().take(parts.len() - 1) {
 		repo_root.push(format!("@{}", part));

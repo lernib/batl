@@ -32,9 +32,8 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 }
 
 fn cmd_ls() -> Result<(), UtilityError> {
-	let repo_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("repositories");
+	let repo_root = System::repository_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
 
 	let mut to_search: Vec<(String, PathBuf)> = std::fs::read_dir(repo_root)?
 		.filter_map(|entry| {
@@ -77,9 +76,8 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let repo_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("repositories");
+	let repo_root = System::repository_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
 
 	let mut path = repo_root;
 	let parts = name.split('/').collect::<Vec<&str>>();
@@ -124,9 +122,8 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let repo_root = System::batl_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.join("repositories");
+	let repo_root = System::repository_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
 
 	let mut path = repo_root;
 	let parts = name.split('/').collect::<Vec<&str>>();
