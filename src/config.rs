@@ -1,5 +1,8 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
+use std::env::current_dir;
+use std::path::{Path, PathBuf};
+use thiserror::Error;
 
 /****************************************
 * Config Formats
@@ -12,6 +15,72 @@ pub struct Config {
 	pub scripts: Option<HashMap<String, String>>
 }
 
+impl Config {
+	pub fn toml_dir(latest_child: &Path) -> Option<PathBuf> {
+		let mut current_path = latest_child.to_path_buf();
+
+		loop {
+			let batl_toml = current_path.join("batl.toml");
+	
+			if batl_toml.exists() {
+				break Some(current_path);
+			}
+	
+			if !current_path.pop() {
+				break None;
+			}
+		}
+	}
+
+	pub fn get_on_condition_from_dir(path: &Path, f: fn(&Self) -> bool) -> Result<Option<Config>, ReadConfigError> {
+		let mut search_dir = Self::toml_dir(path);
+
+		while let Some(config_dir) = search_dir {
+			let config_str = std::fs::read_to_string(config_dir.join("batl.toml"))?;
+
+			let config: Self = toml::from_str(&config_str)?;
+		
+			if !f(&config) {
+				search_dir = config_dir
+					.parent()
+					.and_then(|p| Self::toml_dir(p));
+			} else {
+				return Ok(Some(config));
+			}
+		}
+
+		Ok(None)
+	}
+
+	pub fn get_on_condition(f: fn(&Self) -> bool) -> Result<Option<Config>, ReadConfigError> {
+		Self::get_on_condition_from_dir(&current_dir()?, f)
+	}
+
+	pub fn get_workspace() -> Result<Option<Config>, ReadConfigError> {
+		Self::get_on_condition(|conf| conf.is_workspace())
+	}
+
+	pub fn get_repository() -> Result<Option<Config>, ReadConfigError> {
+		Self::get_on_condition(|conf| conf.is_repository())
+	}
+
+	pub fn get_workspace_from_dir(path: &Path) -> Result<Option<Config>, ReadConfigError> {
+		Self::get_on_condition_from_dir(path, |conf| conf.is_workspace())
+	}
+
+	pub fn get_repository_from_dir(path: &Path) -> Result<Option<Config>, ReadConfigError> {
+		Self::get_on_condition_from_dir(path, |conf| conf.is_repository())
+	}
+
+	pub fn is_workspace(&self) -> bool {
+		self.workspace.is_some()
+	}
+
+	pub fn is_repository(&self) -> bool {
+		self.repository.is_some()
+	}
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct EnvConfig {
 	pub version: String
@@ -22,4 +91,12 @@ pub struct RepositoryConfig {
 	pub name: String,
 	pub version: String,
 	pub build: Option<String>
+}
+
+#[derive(Debug, Error)]
+pub enum ReadConfigError {
+	#[error("{0}")]
+	IoError(#[from] std::io::Error),
+	#[error("{0}")]
+	TomlError(#[from] toml::de::Error)
 }

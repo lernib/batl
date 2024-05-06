@@ -1,12 +1,9 @@
-use crate::config::Config;
 use thiserror::Error;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{
-	path::PathBuf,
-	env::var,
-	io::Write
-};
+use std::env::var;
+use std::io::Write;
+use std::path::PathBuf;
 
 
 lazy_static! {
@@ -75,34 +72,6 @@ pub fn write_toml<T: serde::Serialize>(path: &PathBuf, data: &T) -> Result<(), U
 	file.write_all(toml::to_string(data).unwrap().as_bytes())?;
 
 	Ok(())
-}
-
-pub fn get_workspace_config() -> Result<Config, UtilityError> {
-	let batl_toml_path = get_batl_toml_dir()?.join("batl.toml");
-
-	let config_str = std::fs::read_to_string(batl_toml_path)?;
-
-	let config: Config = toml::from_str(&config_str).map_err(|_| UtilityError::InvalidConfig)?;
-
-	if config.workspace.is_none() {
-		return Err(UtilityError::InvalidConfig);
-	}
-
-	Ok(config)
-}
-
-pub fn get_repository_config(path: &PathBuf) -> Result<Config, UtilityError> {
-	let batl_toml_path = path.join("batl.toml");
-
-	let config_str = std::fs::read_to_string(batl_toml_path)?;
-
-	let config: Config = toml::from_str(&config_str).map_err(|_| UtilityError::InvalidConfig)?;
-
-	if config.repository.is_none() {
-		return Err(UtilityError::InvalidConfig);
-	}
-
-	Ok(config)
 }
 
 pub fn get_batl_toml_dir() -> Result<PathBuf, UtilityError> {

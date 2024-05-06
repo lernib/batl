@@ -1,8 +1,8 @@
 use clap::Subcommand;
+use crate::config::Config;
 use crate::utils::{
-	get_workspace_config, get_batl_toml_dir, write_toml,
-	UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root,
-	get_repository_config
+	get_batl_toml_dir, write_toml,
+	UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root
 };
 use crate::output::*;
 
@@ -55,7 +55,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 }
 
 fn cmd_ls() -> Result<(), UtilityError> {
-	let workspace_config = get_workspace_config()?;
+	let workspace_config = Config::get_workspace()
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
 	let links = workspace_config.workspace.unwrap();
 
@@ -67,7 +69,9 @@ fn cmd_ls() -> Result<(), UtilityError> {
 }
 
 fn cmd_stats(name: String) -> Result<(), UtilityError> {
-	let workspace_config = get_workspace_config()?;
+	let workspace_config = Config::get_workspace()
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
 	let links = workspace_config.workspace.unwrap();
 
@@ -100,7 +104,9 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 
 	repo_root.push(parts.last().unwrap());
 
-	let mut workspace_config = get_workspace_config()?;
+	let mut workspace_config = Config::get_workspace()
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
 	let mut links = workspace_config.workspace.unwrap();
 
@@ -122,7 +128,9 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 }
 
 fn cmd_delete(name: String) -> Result<(), UtilityError> {
-	let mut workspace_config = get_workspace_config()?;
+	let mut workspace_config = Config::get_workspace()
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
 	let mut links = workspace_config.workspace.unwrap();
 
@@ -144,7 +152,9 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 }
 
 fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
-	let workspace_config = get_workspace_config()?;
+	let workspace_config = Config::get_workspace()
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
 	let links = workspace_config.workspace.unwrap();
 	
@@ -164,15 +174,17 @@ fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
 }
 
 fn cmd_exec(name: String, script: String) -> Result<(), UtilityError> {
-	let workspace_config = get_workspace_config()?;
+	let workspace_config = Config::get_workspace()
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
 	let links = workspace_config.workspace.unwrap();
 	
 	links.get(&name).ok_or(UtilityError::LinkNotFound)?;
 
-	let repository_config = get_repository_config(
-		&get_batl_toml_dir()?.join(&name)
-	)?;
+	let repository_config = Config::get_repository_from_dir(&get_batl_toml_dir()?.join(&name))
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
 	let scripts = match repository_config.scripts {
 		Some(scripts) => scripts,
