@@ -1,10 +1,11 @@
 use clap::Subcommand;
 use crate::config::Config;
 use crate::utils::{
-	get_batl_toml_dir, write_toml,
+	write_toml,
 	UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX, get_batl_root
 };
 use crate::output::*;
+use std::env::current_dir;
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -118,9 +119,12 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 
 	workspace_config.workspace = Some(links);
 
-	write_toml(&get_batl_toml_dir()?.join("batl.toml"), &workspace_config)?;
+	let workspace_dir = Config::toml_dir(&current_dir()?)
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
-	std::os::unix::fs::symlink(repo_root, get_batl_toml_dir()?.join(&name))?;
+	write_toml(&workspace_dir.join("batl.toml"), &workspace_config)?;
+
+	std::os::unix::fs::symlink(repo_root, workspace_dir.join(&name))?;
 
 	success(&format!("Initialized link {}", name));
 
@@ -142,9 +146,12 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 
 	workspace_config.workspace = Some(links);
 
-	write_toml(&get_batl_toml_dir()?.join("batl.toml"), &workspace_config)?;
+	let workspace_dir = Config::toml_dir(&current_dir()?)
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
-	std::fs::remove_file(get_batl_toml_dir()?.join(&name))?;
+	write_toml(&workspace_dir.join("batl.toml"), &workspace_config)?;
+
+	std::fs::remove_file(workspace_dir.join(&name))?;
 
 	success(&format!("Deleted link {}", name));
 
@@ -162,8 +169,11 @@ fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
 
 	info(&format!("Running command for link {}\n", name));
 
+	let workspace_dir = Config::toml_dir(&current_dir()?)
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
+
 	std::process::Command::new(args.first().unwrap())
-		.current_dir(get_batl_toml_dir()?.join(&name))
+		.current_dir(workspace_dir.join(&name))
 		.args(args.iter().skip(1))
 		.status()?;
 
@@ -182,7 +192,10 @@ fn cmd_exec(name: String, script: String) -> Result<(), UtilityError> {
 	
 	links.get(&name).ok_or(UtilityError::LinkNotFound)?;
 
-	let repository_config = Config::get_repository_from_dir(&get_batl_toml_dir()?.join(&name))
+	let workspace_dir = Config::toml_dir(&current_dir()?)
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
+
+	let repository_config = Config::get_repository_from_dir(&workspace_dir.join(&name))
 		.map_err(|_| UtilityError::InvalidConfig)?
 		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
@@ -198,7 +211,7 @@ fn cmd_exec(name: String, script: String) -> Result<(), UtilityError> {
 	info(&format!("Running script for link {}\n", name));
 
 	let status = std::process::Command::new("sh")
-		.current_dir(get_batl_toml_dir()?.join(&name))
+		.current_dir(workspace_dir.join(&name))
 		.arg("-c")
 		.arg(scripts.get(&script).unwrap())
 		.status()?;

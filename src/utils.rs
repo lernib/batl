@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::env::var;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 
 lazy_static! {
@@ -66,26 +66,10 @@ pub fn get_batl_root() -> Result<PathBuf, UtilityError> {
 	Err(UtilityError::ResourceDoesNotExist("Battalion root directory".to_string()))
 }
 
-pub fn write_toml<T: serde::Serialize>(path: &PathBuf, data: &T) -> Result<(), UtilityError> {
+pub fn write_toml<T: serde::Serialize>(path: &Path, data: &T) -> Result<(), UtilityError> {
 	let mut file = std::fs::File::create(path)?;
 
 	file.write_all(toml::to_string(data).unwrap().as_bytes())?;
 
 	Ok(())
-}
-
-pub fn get_batl_toml_dir() -> Result<PathBuf, UtilityError> {
-	let mut current_path = std::env::current_dir()?;
-
-	loop {
-		let batl_toml = current_path.join("batl.toml");
-
-		if batl_toml.exists() {
-			break Ok(current_path);
-		}
-
-		if !current_path.pop() {
-			break Err(UtilityError::ResourceDoesNotExist("Workspace config".to_string()));
-		}
-	}
 }
