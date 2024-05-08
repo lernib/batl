@@ -1,5 +1,7 @@
+use std::convert::Infallible;
 use std::env::var as env_var;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 
 pub struct System;
@@ -44,5 +46,100 @@ impl System {
 
 	pub fn repository_root() -> Option<PathBuf> {
 		Self::batl_root().map(|p| p.join("repositories"))
+	}
+
+	pub fn repository(name: ResourceName) -> Option<Repository> {
+		let mut path = Self::repository_root()?;
+
+		let parts = name.components();
+
+		for part in parts.iter().take(parts.len() - 1) {
+			path = path.join(format!("@{}", part));
+		}
+		path = path.join(parts.last().unwrap());
+
+		Some(Repository::new(path))
+	}
+
+	pub fn workspace(name: ResourceName) -> Option<Workspace> {
+		let mut path = Self::workspace_root()?;
+
+		let parts = name.components();
+
+		for part in parts.iter().take(parts.len() - 1) {
+			path = path.join(format!("@{}", part));
+		}
+		path = path.join(parts.last().unwrap());
+
+		Some(Workspace::new(path))
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct ResourceName(Vec<String>);
+
+impl ResourceName {
+	fn new(components: Vec<String>) -> Self {
+		Self(components)
+	}
+
+	fn components(&self) -> &Vec<String> {
+		&self.0
+	}
+}
+
+impl FromStr for ResourceName {
+	type Err = Infallible;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		Ok(Self::new(s.split('/').map(ToString::to_string).collect()))
+	}
+}
+
+impl From<String> for ResourceName {
+	fn from(value: String) -> Self {
+		Self::from_str(&value).unwrap()
+	}
+}
+
+impl From<&str> for ResourceName {
+	fn from(value: &str) -> Self {
+		Self::from_str(value).unwrap()
+	}
+}
+
+pub trait Resource {
+	fn path(&self) -> &Path;
+}
+
+pub struct Repository {
+	path: PathBuf
+}
+
+impl Repository {
+	pub(crate) fn new(path: PathBuf) -> Self {
+		Self { path }
+	}
+}
+
+impl Resource for Repository {
+	fn path(&self) -> &Path {
+		&self.path
+	}
+}
+
+pub struct Workspace {
+	path: PathBuf
+}
+
+impl Workspace {
+	pub(crate) fn new(path: PathBuf) -> Self {
+		Self { path }
+	}
+}
+
+impl Resource for Workspace {
+	fn path(&self) -> &Path {
+		&self.path
 	}
 }

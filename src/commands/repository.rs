@@ -1,6 +1,6 @@
 use clap::Subcommand;
 use crate::config::*;
-use crate::env::System;
+use crate::env::{Resource, System};
 use crate::output::*;
 use crate::utils::{UtilityError, BATL_NAME_REGEX, write_toml};
 use std::collections::HashMap;
@@ -76,17 +76,9 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let repo_root = System::repository_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
-
-	let mut path = repo_root;
-	let parts = name.split('/').collect::<Vec<&str>>();
-
-	for part in parts.iter().take(parts.len() - 1) {
-		path = path.join(format!("@{}", part));
-	}
-
-	path = path.join(parts.last().unwrap());
+	let path = System::repository(name.as_str().into())
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.path().to_path_buf();
 
 	if path.exists() {
 		return Err(UtilityError::ResourceAlreadyExists(format!("repository {}", name)));
@@ -103,7 +95,7 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 		},
 		workspace: None,
 		repository: Some(RepositoryConfig {
-			name: parts.last().unwrap().to_string(),
+			name,
 			version: "0.1.0".to_string(),
 			build: None
 		}),
@@ -122,17 +114,9 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let repo_root = System::repository_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
-
-	let mut path = repo_root;
-	let parts = name.split('/').collect::<Vec<&str>>();
-
-	for part in parts.iter().take(parts.len() - 1) {
-		path = path.join(format!("@{}", part));
-	}
-
-	path = path.join(parts.last().unwrap());
+	let path = System::repository(name.as_str().into())
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.path().to_path_buf();
 
 	if !path.exists() {
 		return Err(UtilityError::ResourceDoesNotExist(format!("repository {}", name)));

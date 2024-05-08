@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use clap::Subcommand;
 use crate::config::*;
-use crate::env::System;
+use crate::env::{Resource, System};
 use crate::output::*;
 use crate::utils::{write_toml, UtilityError, BATL_NAME_REGEX};
 
@@ -92,22 +92,13 @@ fn cmd_init(name: String, ref_: bool) -> Result<(), UtilityError> {
 	}
 
 	if ref_ {
-		let repository_root = System::repository_root()
-			.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
+		let workspace_path = System::workspace(name.as_str().into())
+			.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+			.path().to_path_buf();
 
-		let workspace_root = System::workspace_root()
-			.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
-
-		let parts = name.split('/').collect::<Vec<&str>>();
-		let mut workspace_path = workspace_root;
-		let mut repository_path = repository_root;
-
-		for part in parts.iter().take(parts.len() - 1) {
-			workspace_path = workspace_path.join(format!("@{}", part));
-			repository_path = repository_path.join(format!("@{}", part));
-		}
-		workspace_path = workspace_path.join(parts.last().unwrap());
-		repository_path = repository_path.join(parts.last().unwrap());
+		let repository_path = System::repository(name.as_str().into())
+			.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+			.path().to_path_buf();
 
 		if workspace_path.exists() {
 			return Err(UtilityError::ResourceAlreadyExists(format!("Workspace {}", name)));
@@ -117,25 +108,15 @@ fn cmd_init(name: String, ref_: bool) -> Result<(), UtilityError> {
 			return Err(UtilityError::ResourceDoesNotExist(format!("Repository {}", name)));
 		}
 
+		std::fs::create_dir_all(workspace_path.parent().expect("Nonsensical no workspace parent fault"))?;
 		std::os::unix::fs::symlink(repository_path, workspace_path)?;
 
 		success(&format!("Repository {} workspace created", name));
 	} else {
-		let workspace_root = System::workspace_root()
-			.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
-
-		let parts = name.split('/').collect::<Vec<&str>>();
-		let mut path = workspace_root;
-
-		for part in parts.iter().take(parts.len() - 1) {
-			path = path.join(format!("@{}", part));
-		}
-		path = path.join(parts.last().unwrap());
-
-		if path.exists() {
-			return Err(UtilityError::ResourceAlreadyExists(format!("Workspace {}", name)));
-		}
-
+		let path = System::workspace(name.as_str().into())
+			.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+			.path().to_path_buf();
+	
 		std::fs::create_dir_all(path.clone())?;
 
 		let batl_toml_path = path.join("batl.toml");
@@ -161,16 +142,9 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = System::workspace_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
-
-	let parts = name.split('/').collect::<Vec<&str>>();
-	let mut path = workspace_root;
-
-	for part in parts.iter().take(parts.len() - 1) {
-		path = path.join(format!("@{}", part));
-	}
-	path = path.join(parts.last().unwrap());
+	let path = System::workspace(name.as_str().into())
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.path().to_path_buf();
 
 	if !path.exists() {
 		return Err(UtilityError::ResourceDoesNotExist(format!("Workspace {}", name)));
@@ -188,16 +162,9 @@ fn cmd_cd(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = System::workspace_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
-
-	let parts = name.split('/').collect::<Vec<&str>>();
-	let mut path = workspace_root;
-
-	for part in parts.iter().take(parts.len() - 1) {
-		path = path.join(format!("@{}", part));
-	}
-	path = path.join(parts.last().unwrap());
+	let path = System::workspace(name.as_str().into())
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.path().to_path_buf();
 
 	if !path.exists() {
 		return Err(UtilityError::ResourceDoesNotExist(format!("Workspace {}", name)));
@@ -215,16 +182,9 @@ fn cmd_which(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = System::workspace_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
-
-	let parts = name.split('/').collect::<Vec<&str>>();
-	let mut path = workspace_root;
-
-	for part in parts.iter().take(parts.len() - 1) {
-		path = path.join(format!("@{}", part));
-	}
-	path = path.join(parts.last().unwrap());
+	let path = System::workspace(name.as_str().into())
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.path().to_path_buf();
 
 	if !path.exists() {
 		return Err(UtilityError::ResourceDoesNotExist(format!("Workspace {}", name)));

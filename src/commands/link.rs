@@ -1,6 +1,6 @@
 use clap::Subcommand;
 use crate::config::Config;
-use crate::env::System;
+use crate::env::{Resource, System};
 use crate::utils::{
 	write_toml,
 	UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX
@@ -97,15 +97,9 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let parts = repo.split("/").collect::<Vec<&str>>();
-	let mut repo_root = System::repository_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
-
-	for part in parts.iter().take(parts.len() - 1) {
-		repo_root.push(format!("@{}", part));
-	}
-
-	repo_root.push(parts.last().unwrap());
+	let repo_path = System::repository(name.as_str().into())
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
+		.path().to_path_buf();
 
 	let mut workspace_config = Config::get_workspace()
 		.map_err(|_| UtilityError::InvalidConfig)?
@@ -126,7 +120,7 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 
 	write_toml(&workspace_dir.join("batl.toml"), &workspace_config)?;
 
-	std::os::unix::fs::symlink(repo_root, workspace_dir.join(&name))?;
+	std::os::unix::fs::symlink(repo_path, workspace_dir.join(&name))?;
 
 	success(&format!("Initialized link {}", name));
 
