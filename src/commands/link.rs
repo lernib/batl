@@ -28,7 +28,8 @@ pub enum Commands {
 		args: Vec<String>
 	},
 	Exec {
-		name: String,
+		#[arg(short = 'r')]
+		name: Option<String>,
 		script: String
 	}
 }
@@ -179,19 +180,25 @@ fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
 	Ok(())
 }
 
-fn cmd_exec(name: String, script: String) -> Result<(), UtilityError> {
-	let workspace_config = Config::get_workspace()
-		.map_err(|_| UtilityError::InvalidConfig)?
+fn cmd_exec(name: Option<String>, script: String) -> Result<(), UtilityError> {
+	if let Some(name) = &name {
+		let workspace_config = Config::get_workspace()
+			.map_err(|_| UtilityError::InvalidConfig)?
+			.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
+
+		let links = workspace_config.workspace.unwrap();
+		
+		links.get(name).ok_or(UtilityError::LinkNotFound)?;
+	}
+
+	let mut workspace_dir = Config::toml_dir(&current_dir()?)
 		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
-	let links = workspace_config.workspace.unwrap();
-	
-	links.get(&name).ok_or(UtilityError::LinkNotFound)?;
+	if let Some(name) = &name {
+		workspace_dir.push(name);
+	}
 
-	let workspace_dir = Config::toml_dir(&current_dir()?)
-		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
-
-	let repository_config = Config::get_repository_from_dir(&workspace_dir.join(&name))
+	let repository_config = Config::get_repository_from_dir(&workspace_dir)
 		.map_err(|_| UtilityError::InvalidConfig)?
 		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
@@ -204,10 +211,10 @@ fn cmd_exec(name: String, script: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::ScriptNotFound(script));
 	}
 
-	info(&format!("Running script for link {}\n", name));
+	info(&format!("Running script{}\n", name.map(|s| format!(" for link {}", s)).unwrap_or("".to_string())));
 
 	let status = std::process::Command::new("sh")
-		.current_dir(workspace_dir.join(&name))
+		.current_dir(workspace_dir)
 		.arg("-c")
 		.arg(scripts.get(&script).unwrap())
 		.status()?;
