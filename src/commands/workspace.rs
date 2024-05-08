@@ -11,7 +11,9 @@ use crate::utils::{write_toml, UtilityError, BATL_NAME_REGEX};
 pub enum Commands {
 	Ls,
 	Init {
-		name: String
+		name: String,
+		#[arg(long = "ref")]
+		ref_: bool
 	},
 	Delete {
 		name: String
@@ -29,8 +31,8 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		Commands::Ls => {
 			cmd_ls()
 		},
-		Commands::Init { name } => {
-			cmd_init(name)
+		Commands::Init { name, ref_ } => {
+			cmd_init(name, ref_)
 		},
 		Commands::Delete { name } => {
 			cmd_delete(name)
@@ -84,41 +86,72 @@ fn cmd_ls() -> Result<(), UtilityError> {
 	Ok(())
 }
 
-fn cmd_init(name: String) -> Result<(), UtilityError> {
+fn cmd_init(name: String, ref_: bool) -> Result<(), UtilityError> {
 	if !BATL_NAME_REGEX.is_match(&name) {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let workspace_root = System::workspace_root()
-		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
+	if ref_ {
+		let repository_root = System::repository_root()
+			.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
 
-	let parts = name.split('/').collect::<Vec<&str>>();
-	let mut path = workspace_root;
+		let workspace_root = System::workspace_root()
+			.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
 
-	for part in parts.iter().take(parts.len() - 1) {
-		path = path.join(format!("@{}", part));
+		let parts = name.split('/').collect::<Vec<&str>>();
+		let mut workspace_path = workspace_root;
+		let mut repository_path = repository_root;
+
+		for part in parts.iter().take(parts.len() - 1) {
+			workspace_path = workspace_path.join(format!("@{}", part));
+			repository_path = repository_path.join(format!("@{}", part));
+		}
+		workspace_path = workspace_path.join(parts.last().unwrap());
+		repository_path = repository_path.join(parts.last().unwrap());
+
+		if workspace_path.exists() {
+			return Err(UtilityError::ResourceAlreadyExists(format!("Workspace {}", name)));
+		}
+
+		if !repository_path.exists() {
+			return Err(UtilityError::ResourceDoesNotExist(format!("Repository {}", name)));
+		}
+
+		std::os::unix::fs::symlink(repository_path, workspace_path)?;
+
+		success(&format!("Repository {} workspace created", name));
+	} else {
+		let workspace_root = System::workspace_root()
+			.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
+
+		let parts = name.split('/').collect::<Vec<&str>>();
+		let mut path = workspace_root;
+
+		for part in parts.iter().take(parts.len() - 1) {
+			path = path.join(format!("@{}", part));
+		}
+		path = path.join(parts.last().unwrap());
+
+		if path.exists() {
+			return Err(UtilityError::ResourceAlreadyExists(format!("Workspace {}", name)));
+		}
+
+		std::fs::create_dir_all(path.clone())?;
+
+		let batl_toml_path = path.join("batl.toml");
+		let config = Config {
+			environment: EnvConfig {
+				version: env!("CARGO_PKG_VERSION").to_string(),
+			},
+			workspace: Some(HashMap::new()),
+			repository: None,
+			scripts: None
+		};
+
+		write_toml(&batl_toml_path, &config)?;
+
+		success(&format!("Workspace {} initialized", name));
 	}
-	path = path.join(parts.last().unwrap());
-
-	if path.exists() {
-		return Err(UtilityError::ResourceAlreadyExists(format!("Workspace {}", name)));
-	}
-
-	std::fs::create_dir_all(path.clone())?;
-
-	let batl_toml_path = path.join("batl.toml");
-	let config = Config {
-		environment: EnvConfig {
-			version: env!("CARGO_PKG_VERSION").to_string(),
-		},
-		workspace: Some(HashMap::new()),
-		repository: None,
-		scripts: None
-	};
-
-	write_toml(&batl_toml_path, &config)?;
-
-	success(&format!("Workspace {} initialized", name));
 
 	Ok(())
 }
