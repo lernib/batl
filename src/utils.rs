@@ -31,7 +31,9 @@ pub enum UtilityError {
 	#[error("Script not found: {0}")]
 	ScriptNotFound(String),
 	#[error("Script error: {0}")]
-	ScriptError(String)
+	ScriptError(String),
+	#[error("Resource cannot be collected: {0}")]
+	ResourceNotCollected(String)
 }
 
 pub fn write_toml<T: serde::Serialize>(path: &Path, data: &T) -> Result<(), UtilityError> {

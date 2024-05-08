@@ -7,7 +7,7 @@ use thiserror::Error;
 /****************************************
 * Config Formats
 ****************************************/
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct Config {
 	pub environment: EnvConfig,
 	pub workspace: Option<HashMap<String, String>>,
@@ -32,13 +32,34 @@ impl Config {
 		}
 	}
 
-	pub fn get_on_condition_from_dir(path: &Path, f: fn(&Self) -> bool) -> Result<Option<Config>, ReadConfigError> {
+	pub fn read(path: &Path) -> Result<Self, ReadConfigError> {
+		let config_str = std::fs::read_to_string(path)?;
+		Ok(toml::from_str(&config_str)?)
+	}
+
+	pub fn get_path_on_condition_from_dir(path: &Path, f: impl Fn(&Self) -> bool) -> Result<Option<PathBuf>, ReadConfigError> {
 		let mut search_dir = Self::toml_dir(path);
 
 		while let Some(config_dir) = search_dir {
-			let config_str = std::fs::read_to_string(config_dir.join("batl.toml"))?;
+			let config = Self::read(&config_dir.join("batl.toml"))?;
+		
+			if !f(&config) {
+				search_dir = config_dir
+					.parent()
+					.and_then(|p| Self::toml_dir(p));
+			} else {
+				return Ok(Some(config_dir.join("batl.toml")));
+			}
+		}
 
-			let config: Self = toml::from_str(&config_str)?;
+		Ok(None)
+	}
+
+	pub fn get_on_condition_from_dir(path: &Path, f: impl Fn(&Self) -> bool) -> Result<Option<Config>, ReadConfigError> {
+		let mut search_dir = Self::toml_dir(path);
+
+		while let Some(config_dir) = search_dir {
+			let config = Self::read(&config_dir.join("batl.toml"))?;
 		
 			if !f(&config) {
 				search_dir = config_dir
@@ -52,7 +73,11 @@ impl Config {
 		Ok(None)
 	}
 
-	pub fn get_on_condition(f: fn(&Self) -> bool) -> Result<Option<Config>, ReadConfigError> {
+	pub fn get_path_on_condition(f: impl Fn(&Self) -> bool) -> Result<Option<PathBuf>, ReadConfigError> {
+		Self::get_path_on_condition_from_dir(&current_dir()?, f)
+	}
+
+	pub fn get_on_condition(f: impl Fn(&Self) -> bool) -> Result<Option<Config>, ReadConfigError> {
 		Self::get_on_condition_from_dir(&current_dir()?, f)
 	}
 
@@ -79,18 +104,29 @@ impl Config {
 	pub fn is_repository(&self) -> bool {
 		self.repository.is_some()
 	}
+
+	pub fn path(&self) -> Option<PathBuf> {
+		Self::get_path_on_condition(|conf| conf == self).ok().flatten()
+	}
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct EnvConfig {
 	pub version: String
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct RepositoryConfig {
 	pub name: String,
 	pub version: String,
-	pub build: Option<String>
+	pub build: Option<String>,
+	pub git: Option<RepositoryGitConfig>
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct RepositoryGitConfig {
+	pub url: String,
+	pub path: String
 }
 
 #[derive(Debug, Error)]
