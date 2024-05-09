@@ -1,6 +1,6 @@
 [package]
 name = "batl"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 description = "The multi-repo development tool"
@@ -16,11 +16,13 @@ colored = "2.0.0"
 console = "0.15.8"
 dialoguer = "0.10.4"
 envfile = "0.2.1"
+flate2 = "1.0.30"
 git2 = "0.18.3"
 lazy_static = "1.4.0"
 rand = "0.8.5"
 regex = "1.8.1"
 semver = { version = "1.0.23", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
+tar = "0.4.40"
 thiserror = "1.0.40"
 toml = "0.7.3"

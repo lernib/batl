@@ -29,7 +29,8 @@ enum SubCommand {
 	#[command(alias = "rm")]
 	Remove {
 		name: String
-	}
+	},
+	Upgrade
 }
 
 #[derive(Args)]
@@ -48,7 +49,8 @@ fn main() {
 		SubCommand::Repository(args) => commands::repository::run(args.subcmd),
 		SubCommand::Setup => commands::cmd_setup(),
 		SubCommand::Add { name } => commands::cmd_add(name),
-		SubCommand::Remove { name } => commands::cmd_remove(name)
+		SubCommand::Remove { name } => commands::cmd_remove(name),
+		SubCommand::Upgrade => commands::cmd_upgrade()
 	};
 
 	if let Err(err) = result {

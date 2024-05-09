@@ -76,3 +76,19 @@ pub fn cmd_remove(name: String) -> Result<(), UtilityError> {
 
 	Ok(())
 }
+
+pub fn cmd_upgrade() -> Result<(), UtilityError> {
+	let batl_root = System::batl_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?;
+
+	if !batl_root.join("gen").exists() {
+		let gen_ = batl_root.join("gen");
+
+		std::fs::create_dir(&gen_)?;
+		std::fs::create_dir(&gen_.join("archives"))?;
+
+		success("Added gen folder");
+	}
+
+	Ok(())
+}
