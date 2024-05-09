@@ -86,6 +86,8 @@ pub fn cmd_upgrade() -> Result<(), UtilityError> {
 
 		std::fs::create_dir(&gen_)?;
 		std::fs::create_dir(&gen_.join("archives"))?;
+		std::fs::create_dir(&gen_.join("archives/repositories"))?;
+		std::fs::create_dir(&gen_.join("archives/workspaces"))?;
 
 		success("Added gen folder");
 	}
