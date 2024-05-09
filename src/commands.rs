@@ -1,6 +1,8 @@
+use crate::config::Config;
 use crate::env::System;
-use crate::utils::UtilityError;
-use std::{path::PathBuf, env};
+use crate::output::success;
+use crate::utils::{UtilityError, write_toml};
+use std::{collections::HashMap, env, path::PathBuf};
 
 pub mod workspace;
 pub mod link;
@@ -22,4 +24,55 @@ pub fn cmd_setup() -> Result<(), UtilityError> {
 	println!("Battalion root directory created at {}", batl_root.display());
 
 	Ok(())  
+}
+
+pub fn cmd_add(name: String) -> Result<(), UtilityError> {
+	let config_path = Config::get_path_on_condition(|_| true)
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Batallion config".to_string()))?;
+
+	let mut config = Config::read(&config_path)
+		.map_err(|_| UtilityError::InvalidConfig)?;
+
+	if let Some(mut deps) = config.dependencies {
+		deps.insert(name.clone(), "latest".to_string());
+
+		config.dependencies = Some(deps);
+	} else {
+		let mut deps = HashMap::new();
+		deps.insert(name.clone(), "latest".to_string());
+
+		config.dependencies = Some(deps);
+	}
+
+	write_toml(&config_path, &config)?;
+
+	success(&format!("Added dependency {}", name));
+
+	Ok(())
+}
+
+pub fn cmd_remove(name: String) -> Result<(), UtilityError> {
+	let config_path = Config::get_path_on_condition(|_| true)
+		.map_err(|_| UtilityError::InvalidConfig)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Batallion config".to_string()))?;
+
+	let mut config = Config::read(&config_path)
+		.map_err(|_| UtilityError::InvalidConfig)?;
+
+	if let Some(mut deps) = config.dependencies {
+		if deps.remove(&name).is_none() {
+			return Err(UtilityError::ResourceDoesNotExist("Dependency".to_string()))
+		}
+
+		config.dependencies = Some(deps);
+	} else {
+		return Err(UtilityError::ResourceDoesNotExist("Dependency".to_string()));
+	}
+
+	write_toml(&config_path, &config)?;
+
+	success(&format!("Removed dependency {}", name));
+
+	Ok(())
 }

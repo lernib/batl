@@ -20,7 +20,14 @@ enum SubCommand {
 	Workspace(SubCmdArgs<commands::workspace::Commands>),
 	Link(SubCmdArgs<commands::link::Commands>),
 	Repository(SubCmdArgs<commands::repository::Commands>),
-	Setup
+	Setup,
+	Add {
+		name: String
+	},
+	#[command(alias = "rm")]
+	Remove {
+		name: String
+	}
 }
 
 #[derive(Args)]
@@ -37,7 +44,9 @@ fn main() {
 		SubCommand::Workspace(args) => commands::workspace::run(args.subcmd),
 		SubCommand::Link(args) => commands::link::run(args.subcmd),
 		SubCommand::Repository(args) => commands::repository::run(args.subcmd),
-		SubCommand::Setup => commands::cmd_setup()
+		SubCommand::Setup => commands::cmd_setup(),
+		SubCommand::Add { name } => commands::cmd_add(name),
+		SubCommand::Remove { name } => commands::cmd_remove(name)
 	};
 
 	if let Err(err) = result {

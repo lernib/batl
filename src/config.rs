@@ -1,3 +1,4 @@
+use semver::Version;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::env::current_dir;
@@ -12,7 +13,8 @@ pub struct Config {
 	pub environment: EnvConfig,
 	pub workspace: Option<HashMap<String, String>>,
 	pub repository: Option<RepositoryConfig>,
-	pub scripts: Option<HashMap<String, String>>
+	pub scripts: Option<HashMap<String, String>>,
+	pub dependencies: Option<HashMap<String, String>>
 }
 
 impl Config {
@@ -112,13 +114,13 @@ impl Config {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct EnvConfig {
-	pub version: String
+	pub version: Version
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct RepositoryConfig {
 	pub name: String,
-	pub version: String,
+	pub version: Version,
 	pub build: Option<String>,
 	pub git: Option<RepositoryGitConfig>
 }

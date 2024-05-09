@@ -1,11 +1,12 @@
-use std::collections::HashMap;
-use std::path::PathBuf;
-
 use clap::Subcommand;
 use crate::config::*;
 use crate::env::{Resource, System};
 use crate::output::*;
 use crate::utils::{write_toml, UtilityError, BATL_NAME_REGEX};
+use semver::Version;
+use std::collections::HashMap;
+use std::path::PathBuf;
+
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -122,11 +123,12 @@ fn cmd_init(name: String, ref_: bool) -> Result<(), UtilityError> {
 		let batl_toml_path = path.join("batl.toml");
 		let config = Config {
 			environment: EnvConfig {
-				version: env!("CARGO_PKG_VERSION").to_string(),
+				version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
 			},
 			workspace: Some(HashMap::new()),
 			repository: None,
-			scripts: None
+			scripts: None,
+			dependencies: None
 		};
 
 		write_toml(&batl_toml_path, &config)?;

@@ -98,7 +98,7 @@ fn cmd_init(name: Option<String>, repo: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let repo_path = System::repository(name.as_str().into())
+	let repo_path = System::repository(repo.as_str().into())
 		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
 		.path().to_path_buf();
 

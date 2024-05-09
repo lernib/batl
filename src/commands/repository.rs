@@ -1,13 +1,14 @@
 use clap::Subcommand;
 use console::Term;
 use git2::{FetchOptions, RemoteCallbacks, Progress};
+use semver::Version;
 use crate::config::*;
 use crate::env::{Resource, System};
 use crate::output::*;
 use crate::utils::{UtilityError, BATL_NAME_REGEX, write_toml};
 use git2::build::RepoBuilder;
 use std::collections::HashMap;
-use std::io::{stdout, Write};
+use std::io::Write;
 use std::path::PathBuf;
 
 #[derive(Subcommand)]
@@ -107,16 +108,17 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 
 	let config = Config {
 		environment: EnvConfig {
-			version: env!("CARGO_PKG_VERSION").to_string(),
+			version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
 		},
 		workspace: None,
 		repository: Some(RepositoryConfig {
 			name,
-			version: "0.1.0".to_string(),
+			version: Version::new(0, 1, 0),
 			build: None,
 			git: None
 		}),
-		scripts: Some(scripts)
+		scripts: Some(scripts),
+		dependencies: None
 	};
 
 	write_toml(&path.join("batl.toml"), &config)?;
@@ -166,19 +168,20 @@ fn cmd_clone(url: String, name: String) -> Result<(), UtilityError> {
 
 	let config = Config {
 		environment: EnvConfig {
-			version: env!("CARGO_PKG_VERSION").to_string(),
+			version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
 		},
 		workspace: None,
 		repository: Some(RepositoryConfig {
 			name,
-			version: "0.1.0".to_string(),
+			version: Version::new(0, 1, 0),
 			build: None,
 			git: Some(RepositoryGitConfig {
 				url,
 				path: "git".to_string()
 			})
 		}),
-		scripts: Some(scripts)
+		scripts: Some(scripts),
+		dependencies: None
 	};
 
 	write_toml(&path.join("batl.toml"), &config)?;
