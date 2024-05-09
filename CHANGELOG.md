@@ -4,11 +4,22 @@
 
 ### Changed
 
+- Repositories as workspaces
+- Clonable repositories
+- Repository environment variables
+- Workspace equivalency to repositories in some cases
 - Configuration format
   - `repository.build` -> `scripts`
 - Commands
 	- `workspace cd`
 	- `workspace which`
+	- `workspace init --ref`
+	- `repository clone`
+	- `repository scaffold`
+	- `repository env`
+	- `link stats --get`
+	- `add`
+	- `remove/rm`
 
 ## [0.1.0] - 2023-05-02
 
