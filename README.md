@@ -5,7 +5,7 @@ Battalion is a CLI tool for managing codebase relationships. It uses a simple he
 ## Installation
 
 ```bash
-cargo install --git https://github.com/frqubit/batl
+cargo install batl
 batl setup
 ```
 
@@ -16,8 +16,16 @@ batl setup
 batl repository init prototypes/awesome-project
 
 # Create a new workspace
-batl workspace init awesome-project
+batl workspace init --ref prototypes/awesome-project
 
-# (while in the workspace directory)
-batl link init --name main prototypes/awesome-project
+# Create a library
+batl repository init prototypes/awesome-library
+
+# cd into the workspace
+cd $(batl workspace which prototypes/awesome-project)
+
+# create a link
+batl link init -n library prototypes/awesome-library
+
+# Start building!
 ```
