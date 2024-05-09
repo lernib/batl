@@ -1,4 +1,4 @@
-use clap::Subcommand;
+use clap::{Subcommand, ValueEnum};
 use crate::config::Config;
 use crate::env::{Resource, System};
 use crate::utils::{
@@ -12,6 +12,8 @@ use std::env::current_dir;
 pub enum Commands {
 	Ls,
 	Stats {
+		#[arg(long = "get")]
+		get: Option<StatsGet>,
 		name: String
 	},
 	Init {
@@ -28,7 +30,7 @@ pub enum Commands {
 		args: Vec<String>
 	},
 	Exec {
-		#[arg(short = 'r')]
+		#[arg(short = 'n')]
 		name: Option<String>,
 		script: String
 	}
@@ -39,8 +41,8 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		Commands::Ls => {
 			cmd_ls()
 		},
-		Commands::Stats { name } => {
-			cmd_stats(name)
+		Commands::Stats { name, get } => {
+			cmd_stats(name, get)
 		},
 		Commands::Init { name, repo } => {
 			cmd_init(name, repo)
@@ -71,7 +73,14 @@ fn cmd_ls() -> Result<(), UtilityError> {
 	Ok(())
 }
 
-fn cmd_stats(name: String) -> Result<(), UtilityError> {
+#[derive(Clone, ValueEnum)]
+#[clap(rename_all = "SCREAMING_SNAKE_CASE")]
+enum StatsGet {
+	Name,
+	Repository
+}
+
+fn cmd_stats(name: String, get: Option<StatsGet>) -> Result<(), UtilityError> {
 	let workspace_config = Config::get_workspace()
 		.map_err(|_| UtilityError::InvalidConfig)?
 		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
@@ -80,8 +89,14 @@ fn cmd_stats(name: String) -> Result<(), UtilityError> {
 
 	let link = links.get(&name).ok_or(UtilityError::LinkNotFound)?;
 
-	println!("Link: {}", name);
-	println!("Repository: {}", link);
+	match get {
+		None => {
+			println!("Link: {}", name);
+			println!("Repository: {}", link);
+		},
+		Some(StatsGet::Name) => println!("{name}"),
+		Some(StatsGet::Repository) => println!("{link}")
+	}
 
 	Ok(())
 }

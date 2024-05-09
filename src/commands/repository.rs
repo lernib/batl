@@ -1,5 +1,6 @@
 use clap::Subcommand;
 use console::Term;
+use envfile::EnvFile;
 use git2::{FetchOptions, RemoteCallbacks, Progress};
 use semver::Version;
 use crate::config::*;
@@ -8,6 +9,7 @@ use crate::output::*;
 use crate::utils::{UtilityError, BATL_NAME_REGEX, write_toml};
 use git2::build::RepoBuilder;
 use std::collections::HashMap;
+use std::env::current_dir;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -25,7 +27,12 @@ pub enum Commands {
 		#[arg(short = 'o')]
 		name: String
 	},
-	Scaffold
+	Scaffold,
+	Env {
+		#[arg(short = 'n')]
+		name: Option<String>,
+		var: String
+	}
 }
 
 pub fn run(cmd: Commands) -> Result<(), UtilityError> {
@@ -44,6 +51,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		},
 		Commands::Scaffold => {
 			cmd_scaffold()
+		},
+		Commands::Env { name, var } => {
+			cmd_env(name, var)
 		}
 	}
 }
@@ -242,4 +252,22 @@ fn transfer_progress(progress: Progress<'_>) -> bool {
 
 
 	true
+}
+
+fn cmd_env(name: Option<String>, var: String) -> Result<(), UtilityError> {
+	let mut workspace_dir = Config::toml_dir(&current_dir()?)
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
+
+	if let Some(name) = &name {
+		workspace_dir.push(name);
+	}
+
+	let env_file = EnvFile::new(&workspace_dir.join("batl.env"))
+		.map_err(|_| UtilityError::ResourceDoesNotExist("Environment variables".to_string()))?;
+
+	if let Some(val) = env_file.get(&var) {
+		println!("{}", val);
+	}
+
+	Ok(())
 }
