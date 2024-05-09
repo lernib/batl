@@ -75,7 +75,7 @@ fn cmd_ls() -> Result<(), UtilityError> {
 
 #[derive(Clone, ValueEnum)]
 #[clap(rename_all = "SCREAMING_SNAKE_CASE")]
-enum StatsGet {
+pub enum StatsGet {
 	Name,
 	Repository
 }
@@ -213,9 +213,8 @@ fn cmd_exec(name: Option<String>, script: String) -> Result<(), UtilityError> {
 		workspace_dir.push(name);
 	}
 
-	let repository_config = Config::get_repository_from_dir(&workspace_dir)
-		.map_err(|_| UtilityError::InvalidConfig)?
-		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
+	let repository_config = Config::read(&workspace_dir.join("batl.toml"))
+		.map_err(|_| UtilityError::InvalidConfig)?;
 
 	let scripts = match repository_config.scripts {
 		Some(scripts) => scripts,
