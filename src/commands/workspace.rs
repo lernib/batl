@@ -1,10 +1,7 @@
 use clap::Subcommand;
-use crate::config::*;
-use crate::env::{Resource, System};
+use crate::env::{Repository, Resource, ResourceName, System, Workspace};
 use crate::output::*;
-use crate::utils::{write_toml, UtilityError, BATL_NAME_REGEX};
-use semver::Version;
-use std::collections::HashMap;
+use crate::utils::{UtilityError, BATL_NAME_REGEX};
 use std::path::PathBuf;
 
 
@@ -17,9 +14,6 @@ pub enum Commands {
 		ref_: bool
 	},
 	Delete {
-		name: String
-	},
-	Cd {
 		name: String
 	},
 	Which {
@@ -37,9 +31,6 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		},
 		Commands::Delete { name } => {
 			cmd_delete(name)
-		},
-		Commands::Cd { name } => {
-			cmd_cd(name)
 		},
 		Commands::Which { name } => {
 			cmd_which(name)
@@ -92,48 +83,19 @@ fn cmd_init(name: String, ref_: bool) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
+	let name: ResourceName = name.into();
+
 	if ref_ {
-		let workspace_path = System::workspace(name.as_str().into())
-			.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-			.path().to_path_buf();
+		let mut repository = Repository::load(name.clone())?
+			.ok_or(UtilityError::ResourceDoesNotExist("Repository".to_string()))?;
 
-		let repository_path = System::repository(name.as_str().into())
-			.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-			.path().to_path_buf();
-
-		if workspace_path.exists() {
-			return Err(UtilityError::ResourceAlreadyExists(format!("Workspace {}", name)));
-		}
-
-		if !repository_path.exists() {
-			return Err(UtilityError::ResourceDoesNotExist(format!("Repository {}", name)));
-		}
-
-		std::fs::create_dir_all(workspace_path.parent().expect("Nonsensical no workspace parent fault"))?;
-		std::os::unix::fs::symlink(repository_path, workspace_path)?;
+		Workspace::create_from_repository(&mut repository)?;
 
 		success(&format!("Repository {} workspace created", name));
 	} else {
-		let path = System::workspace(name.as_str().into())
-			.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-			.path().to_path_buf();
-	
-		std::fs::create_dir_all(path.clone())?;
+		Workspace::create(name.clone())?;
 
-		let batl_toml_path = path.join("batl.toml");
-		let config = Config {
-			environment: EnvConfig {
-				version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-			},
-			workspace: Some(HashMap::new()),
-			repository: None,
-			scripts: None,
-			dependencies: None
-		};
-
-		write_toml(&batl_toml_path, &config)?;
-
-		success(&format!("Workspace {} initialized", name));
+		success(&format!("Workspace {} initialized", name.clone()));
 	}
 
 	Ok(())
@@ -144,37 +106,12 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let path = System::workspace(name.as_str().into())
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.path().to_path_buf();
+	let workspace = Workspace::load(name.as_str().into())?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace".into()))?;
 
-	if !path.exists() {
-		return Err(UtilityError::ResourceDoesNotExist(format!("Workspace {}", name)));
-	}
-
-	std::fs::remove_dir_all(path)?;
+	workspace.destroy()?;
 
 	success(&format!("Workspace {} deleted", name));
-
-	Ok(())
-}
-
-fn cmd_cd(name: String) -> Result<(), UtilityError> {
-	if !BATL_NAME_REGEX.is_match(&name) {
-		return Err(UtilityError::InvalidName(name));
-	}
-
-	let path = System::workspace(name.as_str().into())
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.path().to_path_buf();
-
-	if !path.exists() {
-		return Err(UtilityError::ResourceDoesNotExist(format!("Workspace {}", name)));
-	}
-
-	std::env::set_current_dir(path)?;
-
-	success(&format!("Workspace {} selected", name));
 
 	Ok(())
 }
@@ -184,15 +121,10 @@ fn cmd_which(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let path = System::workspace(name.as_str().into())
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.path().to_path_buf();
+	let workspace = Workspace::load(name.into())?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace".into()))?;
 
-	if !path.exists() {
-		return Err(UtilityError::ResourceDoesNotExist(format!("Workspace {}", name)));
-	}
-
-	println!("{}", path.to_string_lossy());
+	println!("{}", workspace.path().to_string_lossy());
 
 	Ok(())
 }

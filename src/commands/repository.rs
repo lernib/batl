@@ -1,17 +1,15 @@
 use clap::Subcommand;
 use console::Term;
-use envfile::EnvFile;
-use git2::{FetchOptions, RemoteCallbacks, Progress};
-use semver::Version;
 use crate::config::*;
-use crate::env::{Resource, System};
+use crate::env::{CreateRepositoryOptions, Repository, Resource, System};
 use crate::output::*;
-use crate::utils::{UtilityError, BATL_NAME_REGEX, write_toml};
+use crate::utils::{UtilityError, BATL_NAME_REGEX};use envfile::EnvFile;
+use git2::{FetchOptions, RemoteCallbacks, Progress};
 use git2::build::RepoBuilder;
-use std::collections::HashMap;
 use std::env::current_dir;
 use std::io::Write;
 use std::path::PathBuf;
+
 
 #[derive(Subcommand)]
 pub enum Commands {
@@ -103,35 +101,7 @@ fn cmd_init(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let path = System::repository(name.as_str().into())
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.path().to_path_buf();
-
-	if path.exists() {
-		return Err(UtilityError::ResourceAlreadyExists(format!("repository {}", name)));
-	}
-
-	std::fs::create_dir_all(&path)?;
-
-	let mut scripts = HashMap::new();
-	scripts.insert("build".to_string(), "echo \"No build targets\" && exit 1".to_string());
-
-	let config = Config {
-		environment: EnvConfig {
-			version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-		},
-		workspace: None,
-		repository: Some(RepositoryConfig {
-			name,
-			version: Version::new(0, 1, 0),
-			build: None,
-			git: None
-		}),
-		scripts: Some(scripts),
-		dependencies: None
-	};
-
-	write_toml(&path.join("batl.toml"), &config)?;
+	Repository::create(name.into(), Default::default())?;
 
 	success("Initialized repository successfully");
 
@@ -143,15 +113,9 @@ fn cmd_delete(name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let path = System::repository(name.as_str().into())
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.path().to_path_buf();
-
-	if !path.exists() {
-		return Err(UtilityError::ResourceDoesNotExist(format!("repository {}", name)));
-	}
-
-	std::fs::remove_dir_all(path)?;
+	Repository::load(name.into())?
+		.ok_or(UtilityError::ResourceDoesNotExist("Repository".to_string()))?
+		.destroy()?;
 
 	success("Deleted repository successfully");
 
@@ -163,38 +127,13 @@ fn cmd_clone(url: String, name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let path = System::repository(name.as_str().into())
-		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?
-		.path().to_path_buf();
-
-	if path.exists() {
-		return Err(UtilityError::ResourceAlreadyExists(format!("repository {}", name)));
-	}
-	
-	std::fs::create_dir_all(&path)?;
-
-	let mut scripts = HashMap::new();
-	scripts.insert("build".to_string(), "echo \"No build targets\" && exit 1".to_string());
-
-	let config = Config {
-		environment: EnvConfig {
-			version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
-		},
-		workspace: None,
-		repository: Some(RepositoryConfig {
-			name,
-			version: Version::new(0, 1, 0),
-			build: None,
-			git: Some(RepositoryGitConfig {
-				url,
-				path: "git".to_string()
-			})
+	Repository::create(name.into(), CreateRepositoryOptions {
+		git: Some(RepositoryGitConfig {
+			url,
+			path: "git".to_string()
 		}),
-		scripts: Some(scripts),
-		dependencies: None
-	};
-
-	write_toml(&path.join("batl.toml"), &config)?;
+		..Default::default()
+	})?;
 
 	success("Initialized repository clone successfully");
 
@@ -202,19 +141,13 @@ fn cmd_clone(url: String, name: String) -> Result<(), UtilityError> {
 }
 
 fn cmd_scaffold() -> Result<(), UtilityError> {
-	let config = Config::get_repository()
-		.map_err(|_| UtilityError::InvalidConfig)?
-		.ok_or(UtilityError::ResourceDoesNotExist("Repository Configuration".to_string()))?;
+	let repository = Repository::locate_then_load(&current_dir()?)?
+		.ok_or(UtilityError::ResourceDoesNotExist("Repository".to_string()))?;
 
+	let config = repository.config();
 
-	let repository = config.repository.clone().expect("Nonsensical repository config without a repository");
-
-	if let Some(git) = repository.git {
-		let git_path = config.path()
-			.expect("Nonsensical no path for config file")
-			.parent()
-			.expect("Nonsensical config path has no parent")
-			.join(git.path);
+	if let Some(git) = config.git {
+		let git_path = repository.path().join(git.path);
 
 		let mut fetch_callbacks = RemoteCallbacks::new();
 		fetch_callbacks.transfer_progress(transfer_progress);
