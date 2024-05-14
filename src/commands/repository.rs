@@ -13,7 +13,9 @@ use std::path::PathBuf;
 
 #[derive(Subcommand)]
 pub enum Commands {
-	Ls,
+	Ls {
+		filter: Option<String>
+	},
 	Init {
 		name: String
 	},
@@ -35,8 +37,8 @@ pub enum Commands {
 
 pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 	match cmd {
-		Commands::Ls => {
-			cmd_ls()
+		Commands::Ls { filter } => {
+			cmd_ls(filter)
 		},
 		Commands::Init { name } => {
 			cmd_init(name)
@@ -56,7 +58,7 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 	}
 }
 
-fn cmd_ls() -> Result<(), UtilityError> {
+fn cmd_ls(filter: Option<String>) -> Result<(), UtilityError> {
 	let repo_root = System::repository_root()
 		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
 
@@ -90,6 +92,12 @@ fn cmd_ls() -> Result<(), UtilityError> {
 	}
 
 	for name in found {
+		if let Some(filter_str) = &filter {
+			if !name.starts_with(filter_str) {
+				continue;
+			}
+		}
+
 		println!("{}", name);
 	}
 

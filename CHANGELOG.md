@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - Unreleased
+
+### Changed
+
+- Commands
+	- `workspace ls [filter]`
+
 ## [0.2.0] - 2024-05-08
 
 ### Changed
