@@ -202,21 +202,24 @@ impl Repository {
 	}
 
 	fn save(&self) -> Result<(), std::io::Error> {
-		write_toml(self.path(), &self.config)
+		write_toml(&self.path().to_path_buf().join("batl.toml"), &self.config)
 	}
 
-	pub(crate) fn from_path(path: PathBuf) -> Result<Self, GeneralResourceError> {
+	pub(crate) fn from_path(path: &Path) -> Result<Self, GeneralResourceError> {
 		let config = Config::read(&path.join("batl.toml"))?;
 
 		Ok(Self {
-			name: path.as_path().into(),
-			path,
+			name: path.into(),
+			path: path.to_path_buf(),
 			config,
 		})
 	}
 
 	pub fn locate_then_load(path: &Path) -> Result<Option<Self>, GeneralResourceError> {
-		Config::get_path_on_condition_from_dir(path, Config::is_repository)?.map(Self::from_path).transpose()
+		Config::get_path_on_condition_from_dir(path, Config::is_repository)?
+			.and_then(|p| p.parent().map(Path::to_path_buf))
+			.map(|p| Self::from_path(&p))
+			.transpose()
 	}
 
 	pub fn scripts(&self) -> HashMap<String, String> {
@@ -338,21 +341,24 @@ impl Workspace {
 	}
 
 	fn save(&self) -> Result<(), std::io::Error> {
-		write_toml(self.path(), &self.config)
+		write_toml(&self.path().to_path_buf().join("batl.toml"), &self.config)
 	}
 
-	pub(crate) fn from_path(path: PathBuf) -> Result<Self, GeneralResourceError> {
+	pub(crate) fn from_path(path: &Path) -> Result<Self, GeneralResourceError> {
 		let config = Config::read(&path.join("batl.toml"))?;
 
 		Ok(Self {
-			name: path.as_path().into(),
-			path,
+			name: path.into(),
+			path: path.to_path_buf(),
 			config
 		})
 	}
 
 	pub fn locate_then_load(path: &Path) -> Result<Option<Self>, GeneralResourceError> {
-		Config::get_path_on_condition_from_dir(path, Config::is_workspace)?.map(Self::from_path).transpose()
+		Config::get_path_on_condition_from_dir(path, Config::is_repository)?
+			.and_then(|p| p.parent().map(Path::to_path_buf))
+			.map(|p| Self::from_path(&p))
+			.transpose()
 	}
 
 	pub fn links(&self) -> HashMap<String, String> {
