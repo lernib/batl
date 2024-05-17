@@ -1,7 +1,7 @@
 use clap::Subcommand;
 use console::Term;
 use crate::config::*;
-use crate::env::{CreateRepositoryOptions, Repository, Resource, System};
+use crate::env::{CreateRepositoryOptions, Repository, Resource, ResourceName, System};
 use crate::output::*;
 use crate::utils::{UtilityError, BATL_NAME_REGEX};use envfile::EnvFile;
 use git2::{FetchOptions, RemoteCallbacks, Progress};
@@ -39,6 +39,9 @@ pub enum Commands {
 	Publish {
 		name: String
 	},
+	Fetch {
+		name: String
+	},
 	Which {
 		name: String
 	},
@@ -74,6 +77,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		},
 		Commands::Publish { name } => {
 			cmd_publish(name)
+		},
+		Commands::Fetch { name } => {
+			cmd_fetch(name)
 		},
 		Commands::Which { name } => {
 			cmd_which(name)
@@ -255,7 +261,7 @@ fn cmd_publish(name: String) -> Result<(), UtilityError> {
 	let archive = repository.archive()
 		.ok_or(UtilityError::ResourceDoesNotExist("Archive".into()))?;
 
-	let resp = ureq::post("https://api.batl.circetools.net/pkg/upload")
+	let resp = ureq::post("https://api.batl.circetools.net/pkg")
 		.query("id", &repository.name().to_string())
 		.send(archive.to_file())?;
 
@@ -307,6 +313,27 @@ fn cmd_exec(name: Option<String>, script: String) -> Result<(), UtilityError> {
 
 	println!("");
 	success("Script completed successfully");
+
+	Ok(())
+}
+
+fn cmd_fetch(name: String) -> Result<(), UtilityError> {
+	let resp = ureq::get("https://api.batl.circetools.net/pkg")
+		.query("id", &name)
+		.call()?;
+
+	let body = resp.into_reader();
+	let mut tar = tar::Archive::new(body);
+
+	let repository_path = System::repository_root()
+		.ok_or(UtilityError::ResourceDoesNotExist("Battalion setup".to_string()))?
+		.join(PathBuf::from(&ResourceName::from(name.as_str())));
+
+	std::fs::create_dir_all(&repository_path)?;
+
+	tar.unpack(repository_path)?;
+
+	success(&format!("Fetched repository {}", name));
 
 	Ok(())
 }
