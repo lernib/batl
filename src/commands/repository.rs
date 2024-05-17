@@ -38,6 +38,14 @@ pub enum Commands {
 	},
 	Publish {
 		name: String
+	},
+	Which {
+		name: String
+	},
+	Exec {
+		#[arg(short = 'n')]
+		name: Option<String>,
+		script: String
 	}
 }
 
@@ -66,6 +74,12 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		},
 		Commands::Publish { name } => {
 			cmd_publish(name)
+		},
+		Commands::Which { name } => {
+			cmd_which(name)
+		},
+		Commands::Exec { name, script } => {
+			cmd_exec(name, script)
 		}
 	}
 }
@@ -250,6 +264,49 @@ fn cmd_publish(name: String) -> Result<(), UtilityError> {
 	} else {
 		error(&format!("Failed to send repository: status code {}", resp.status()))
 	}
+
+	Ok(())
+}
+
+fn cmd_which(name: String) -> Result<(), UtilityError> {
+	if !BATL_NAME_REGEX.is_match(&name) {
+		return Err(UtilityError::InvalidName(name));
+	}
+
+	let workspace = Repository::load(name.into())?
+		.ok_or(UtilityError::ResourceDoesNotExist("Workspace".into()))?;
+
+	println!("{}", workspace.path().to_string_lossy());
+
+	Ok(())
+}
+
+fn cmd_exec(name: Option<String>, script: String) -> Result<(), UtilityError> {
+	let repository = match &name {
+		Some(val) => {
+			Repository::load(val.as_str().into())?
+		},
+		None => Repository::locate_then_load(&current_dir()?)?
+	}.ok_or(UtilityError::ResourceDoesNotExist("Repository".to_string()))?;
+
+	let command = repository.script(&script)
+		.ok_or(UtilityError::ScriptNotFound(script))?;
+
+	info(&format!("Running script{}\n", name.map(|s| format!(" for link {}", s)).unwrap_or("".to_string())));
+
+	let status = std::process::Command::new("sh")
+		.current_dir(repository.path())
+		.arg("-c")
+		.arg(command)
+		.status()?;
+
+
+	if !status.success() {
+		return Err(UtilityError::ScriptError(format!("Exit code {}", status.code().unwrap_or(0))))
+	}
+
+	println!("");
+	success("Script completed successfully");
 
 	Ok(())
 }

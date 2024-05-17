@@ -7,6 +7,9 @@
 - Commands
 	- `workspace ls [filter]`
 	- `repository archive <name>`
+	- `repository publish <name>`
+	- `repository which <name>`
+	- `repository exec [-n <name>] <script>`
 
 ## [0.2.0] - 2024-05-08
 
