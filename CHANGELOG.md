@@ -6,6 +6,7 @@
 
 - Commands
 	- `workspace ls [filter]`
+	- `repository archive <name>`
 
 ## [0.2.0] - 2024-05-08
 

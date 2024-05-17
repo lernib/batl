@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 use std::env::var as env_var;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use thiserror::Error;
@@ -52,6 +53,14 @@ impl System {
 
 	pub fn repository_root() -> Option<PathBuf> {
 		Self::batl_root().map(|p| p.join("repositories"))
+	}
+
+	pub fn gen_root() -> Option<PathBuf> {
+		Self::batl_root().map(|p| p.join("gen"))
+	}
+
+	pub fn archive_root() -> Option<PathBuf> {
+		Self::gen_root().map(|p| p.join("archives"))
 	}
 }
 
@@ -252,6 +261,48 @@ impl Repository {
 
 	pub fn config(&self) -> RepositoryConfig {
 		self.config.repository.clone().expect("Nonsensical repository without repository config")
+	}
+
+	pub fn archive_gen(&self) -> Result<(), CreateDependentResourceError> {
+		let mut walk_builder = ignore::WalkBuilder::new(self.path());
+
+		if let Some(git) = self.config().git {
+			walk_builder.add_ignore(git.path);
+		}
+
+		walk_builder.add_custom_ignore_filename("batl.ignore");
+
+		let walk = walk_builder.build();
+
+		let tar_path = System::archive_root()
+			.ok_or(CreateResourceError::NotSetup)?
+			.join("repositories")
+			.join(format!("{}.tar", self.name));
+
+		std::fs::create_dir_all(tar_path.parent().expect("Nonsensical tar path without parent"))?;
+
+		let archive_file = File::create(tar_path)?;
+		let mut archive = tar::Builder::new(archive_file);
+
+		for result in walk {
+			let entry = result.map_err(|_| GeneralResourceError::Invalid)?;
+
+			let abs_path = entry.path();
+
+			if abs_path.is_dir() {
+				continue;
+			}
+
+			let rel_path = pathdiff::diff_paths(abs_path, self.path());
+
+			if let Some(rel_path) = rel_path {				
+				archive.append_path_with_name(abs_path, rel_path)?;
+			}
+		}
+
+		archive.finish()?;
+
+		Ok(())
 	}
 }
 

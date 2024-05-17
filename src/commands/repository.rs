@@ -32,6 +32,9 @@ pub enum Commands {
 		#[arg(short = 'n')]
 		name: Option<String>,
 		var: String
+	},
+	Archive {
+		name: String
 	}
 }
 
@@ -54,6 +57,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		},
 		Commands::Env { name, var } => {
 			cmd_env(name, var)
+		},
+		Commands::Archive { name } => {
+			cmd_archive(name)
 		}
 	}
 }
@@ -209,6 +215,15 @@ fn cmd_env(name: Option<String>, var: String) -> Result<(), UtilityError> {
 	if let Some(val) = env_file.get(&var) {
 		println!("{}", val);
 	}
+
+	Ok(())
+}
+
+fn cmd_archive(name: String) -> Result<(), UtilityError> {
+	let repository = Repository::load(name.as_str().into())?
+		.ok_or(UtilityError::ResourceDoesNotExist("Repository".into()))?;
+
+	repository.archive_gen()?;
 
 	Ok(())
 }
