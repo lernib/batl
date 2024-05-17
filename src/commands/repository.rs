@@ -35,6 +35,9 @@ pub enum Commands {
 	},
 	Archive {
 		name: String
+	},
+	Publish {
+		name: String
 	}
 }
 
@@ -60,6 +63,9 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		},
 		Commands::Archive { name } => {
 			cmd_archive(name)
+		},
+		Commands::Publish { name } => {
+			cmd_publish(name)
 		}
 	}
 }
@@ -224,6 +230,26 @@ fn cmd_archive(name: String) -> Result<(), UtilityError> {
 		.ok_or(UtilityError::ResourceDoesNotExist("Repository".into()))?;
 
 	repository.archive_gen()?;
+
+	Ok(())
+}
+
+fn cmd_publish(name: String) -> Result<(), UtilityError> {
+	let repository = Repository::load(name.as_str().into())?
+		.ok_or(UtilityError::ResourceDoesNotExist("Repository".into()))?;
+
+	let archive = repository.archive()
+		.ok_or(UtilityError::ResourceDoesNotExist("Archive".into()))?;
+
+	let resp = ureq::post("https://api.batl.circetools.net/pkg/upload")
+		.query("id", &repository.name().to_string())
+		.send(archive.to_file())?;
+
+	if resp.status() == 200 {
+		success(&format!("Published repository {}", name))
+	} else {
+		error(&format!("Failed to send repository: status code {}", resp.status()))
+	}
 
 	Ok(())
 }

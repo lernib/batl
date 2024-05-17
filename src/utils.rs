@@ -33,7 +33,9 @@ pub enum UtilityError {
 	#[error("Script error: {0}")]
 	ScriptError(String),
 	#[error("Resource cannot be collected: {0}")]
-	ResourceNotCollected(String)
+	ResourceNotCollected(String),
+	#[error("Network Error: {0}")]
+	NetworkError(#[from] ureq::Error)
 }
 
 impl From<ReadConfigError> for UtilityError {

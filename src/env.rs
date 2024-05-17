@@ -263,7 +263,7 @@ impl Repository {
 		self.config.repository.clone().expect("Nonsensical repository without repository config")
 	}
 
-	pub fn archive_gen(&self) -> Result<(), CreateDependentResourceError> {
+	pub fn archive_gen(&self) -> Result<Archive, CreateDependentResourceError> {
 		let mut walk_builder = ignore::WalkBuilder::new(self.path());
 
 		if let Some(git) = self.config().git {
@@ -281,7 +281,7 @@ impl Repository {
 
 		std::fs::create_dir_all(tar_path.parent().expect("Nonsensical tar path without parent"))?;
 
-		let archive_file = File::create(tar_path)?;
+		let archive_file = File::create(&tar_path)?;
 		let mut archive = tar::Builder::new(archive_file);
 
 		for result in walk {
@@ -300,9 +300,16 @@ impl Repository {
 			}
 		}
 
-		archive.finish()?;
+		let archive = archive.into_inner()?;
 
-		Ok(())
+		Ok(Archive {
+			tar: tar::Archive::new(archive),
+			path: tar_path.to_path_buf()
+		})
+	}
+
+	pub fn archive(&self) -> Option<Archive> {
+		Archive::load(self.name.clone()).ok().flatten()
 	}
 }
 
@@ -474,6 +481,45 @@ impl Resource for Workspace {
 
 	fn config(&self) -> &Config {
 		&self.config
+	}
+}
+
+pub struct Archive {
+	tar: tar::Archive<File>,
+	path: PathBuf
+}
+
+impl Archive {
+	pub fn load(name: ResourceName) -> Result<Option<Self>, GeneralResourceError> {
+		let tar_path = System::archive_root().map(|p| p
+			.join("repositories")
+			.join(format!("{}.tar", name))
+		);
+
+		if let Some(tar_path) = tar_path {
+			let file = File::open(&tar_path)?;
+			let archive = tar::Archive::new(file);
+
+
+			Ok(Some(Self {
+				path: tar_path,
+				tar: archive
+			}))
+		} else {
+			Ok(None)
+		}
+	}
+
+	pub fn tar(&self) -> &tar::Archive<File> {
+		&self.tar
+	}
+
+	pub fn path(&self) -> &Path {
+		&self.path
+	}
+
+	pub fn to_file(self) -> File {
+		self.tar.into_inner()
 	}
 }
 

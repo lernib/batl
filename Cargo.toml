@@ -28,3 +28,4 @@ serde = { version = "1", features = ["derive"] }
 tar = "0.4.40"
 thiserror = "1.0.40"
 toml = "0.7.3"
+ureq = "2.9.7"
