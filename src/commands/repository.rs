@@ -255,6 +255,9 @@ fn cmd_archive(name: String) -> Result<(), UtilityError> {
 }
 
 fn cmd_publish(name: String) -> Result<(), UtilityError> {
+	let batlrc = System::batlrc()
+		.ok_or(UtilityError::ResourceDoesNotExist("BatlRc".to_string()))?;
+
 	let repository = Repository::load(name.as_str().into())?
 		.ok_or(UtilityError::ResourceDoesNotExist("Repository".into()))?;
 
@@ -263,6 +266,7 @@ fn cmd_publish(name: String) -> Result<(), UtilityError> {
 
 	let resp = ureq::post("https://api.batl.circetools.net/pkg")
 		.query("id", &repository.name().to_string())
+		.set("x-api-key", &batlrc.api.credentials)
 		.send(archive.to_file())?;
 
 	if resp.status() == 200 {

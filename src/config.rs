@@ -138,3 +138,21 @@ pub enum ReadConfigError {
 	#[error("{0}")]
 	TomlError(#[from] toml::de::Error)
 }
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Default)]
+pub struct BatlRc {
+	pub api: BatlRcApi
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct BatlRcApi {
+	pub credentials: String
+}
+
+impl Default for BatlRcApi {
+	fn default() -> Self {
+		Self {
+			credentials: "YOUR-KEY-GOES-HERE".to_string()
+		}
+	}
+}

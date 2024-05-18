@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{BatlRc, Config};
 use crate::env::System;
 use crate::output::success;
 use crate::utils::{UtilityError, write_toml};
@@ -19,7 +19,10 @@ pub fn cmd_setup() -> Result<(), UtilityError> {
 
 	std::fs::create_dir_all(batl_root.join("workspaces"))?;
 	std::fs::create_dir_all(batl_root.join("repositories"))?;
-	std::fs::File::create(batl_root.join(".batlrc"))?;
+
+	let batlrc = BatlRc::default();
+	
+	write_toml(&batl_root.join(".batlrc"), &batlrc)?;
 
 	println!("Battalion root directory created at {}", batl_root.display());
 
@@ -91,6 +94,31 @@ pub fn cmd_upgrade() -> Result<(), UtilityError> {
 
 		success("Added gen folder");
 	}
+
+	if System::batlrc().is_none() {
+		let batlrc = BatlRc::default();
+	
+		write_toml(&System::batlrc_path().expect("Nonsensical already checked for root"), &batlrc)?;
+
+		success("Added batlrc toml");
+	}
+
+	Ok(())
+}
+
+pub fn cmd_auth() -> Result<(), UtilityError> {
+	let mut key_prompt = dialoguer::Input::new();
+
+	let api_key: String = key_prompt.with_prompt("API key").interact()?;
+
+	let mut batlrc = System::batlrc()
+		.ok_or(UtilityError::ResourceDoesNotExist("BatlRc".to_string()))?;
+
+	batlrc.api.credentials = api_key;
+
+	write_toml(&System::batlrc_path().expect("Nonsensical just read batlrc"), &batlrc)?;
+
+	success("Added new API key");
 
 	Ok(())
 }

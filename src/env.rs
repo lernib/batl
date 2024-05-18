@@ -62,6 +62,15 @@ impl System {
 	pub fn archive_root() -> Option<PathBuf> {
 		Self::gen_root().map(|p| p.join("archives"))
 	}
+
+	pub fn batlrc_path() -> Option<PathBuf> {
+		System::batl_root().map(|p| p.join(".batlrc"))
+	}
+
+	pub fn batlrc() -> Option<BatlRc> {
+		let config_str = std::fs::read_to_string(System::batlrc_path()?).ok()?;
+		toml::from_str(&config_str).ok()
+	}
 }
 
 #[derive(Debug, Clone)]

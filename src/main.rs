@@ -30,7 +30,8 @@ enum SubCommand {
 	Remove {
 		name: String
 	},
-	Upgrade
+	Upgrade,
+	Auth
 }
 
 #[derive(Args)]
@@ -50,7 +51,8 @@ fn main() {
 		SubCommand::Setup => commands::cmd_setup(),
 		SubCommand::Add { name } => commands::cmd_add(name),
 		SubCommand::Remove { name } => commands::cmd_remove(name),
-		SubCommand::Upgrade => commands::cmd_upgrade()
+		SubCommand::Upgrade => commands::cmd_upgrade(),
+		SubCommand::Auth => commands::cmd_auth()
 	};
 
 	if let Err(err) = result {
