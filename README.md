@@ -7,6 +7,11 @@ Battalion is a CLI tool for managing codebase relationships. It uses a simple he
 ```bash
 cargo install batl
 batl setup
+
+# (optional) Install batlas
+batl repository fetch battalion/batlas
+batl repository exec -n battalion/batlas build
+batl repository exec -n battalion/batlas install
 ```
 
 ## Usage
@@ -24,7 +29,10 @@ batl repository init prototypes/awesome-library
 # cd into the workspace
 cd $(batl workspace which prototypes/awesome-project)
 
-# create a link
+# ...or if you use batlas with VSCode...
+batlas prototypes/awesome-project code %!
+
+# create a link while in directory of workspace
 batl link init -n library prototypes/awesome-library
 
 # Start building!

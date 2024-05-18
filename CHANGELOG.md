@@ -10,6 +10,7 @@
 	- `repository publish <name>`
 	- `repository which <name>`
 	- `repository exec [-n <name>] <script>`
+	- `auth`
 
 ## [0.2.0] - 2024-05-08
 
