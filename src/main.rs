@@ -57,5 +57,6 @@ fn main() {
 
 	if let Err(err) = result {
 		output::error(err.to_string().as_str());
+		std::process::exit(1);
 	}
 }
