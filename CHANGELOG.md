@@ -1,6 +1,8 @@
 # Changelog
 
-## [0.2.1] - Unreleased
+## [0.2.2] - Unreleased
+
+## [0.2.1] - 2024-05-18
 
 ### Changed
 
@@ -8,6 +10,7 @@
 	- `workspace ls [filter]`
 	- `repository archive <name>`
 	- `repository publish <name>`
+	- `repository fetch <name>`
 	- `repository which <name>`
 	- `repository exec [-n <name>] <script>`
 	- `auth`

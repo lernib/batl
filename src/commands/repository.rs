@@ -264,8 +264,9 @@ fn cmd_publish(name: String) -> Result<(), UtilityError> {
 	let archive = repository.archive()
 		.ok_or(UtilityError::ResourceDoesNotExist("Archive".into()))?;
 
-	let resp = ureq::post("https://api.batl.circetools.net/pkg")
-		.query("id", &repository.name().to_string())
+	let url = format!("https://api.batl.circetools.net/pkg/{}", &repository.name().to_string());
+
+	let resp = ureq::post(&url)
 		.set("x-api-key", &batlrc.api.credentials)
 		.send(archive.to_file())?;
 
@@ -322,8 +323,9 @@ fn cmd_exec(name: Option<String>, script: String) -> Result<(), UtilityError> {
 }
 
 fn cmd_fetch(name: String) -> Result<(), UtilityError> {
-	let resp = ureq::get("https://api.batl.circetools.net/pkg")
-		.query("id", &name)
+	let url = format!("https://api.batl.circetools.net/pkg/{}", name);
+
+	let resp = ureq::get(&url)
 		.call()?;
 
 	let body = resp.into_reader();
