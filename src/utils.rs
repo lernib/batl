@@ -1,5 +1,6 @@
 use crate::config::ReadConfigError;
 use crate::env::{CreateDependentResourceError, CreateResourceError, DeleteResourceError, GeneralResourceError};
+use crate::output::error;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::io::Write;
@@ -90,6 +91,34 @@ pub fn write_toml<T: serde::Serialize>(path: &Path, data: &T) -> Result<(), std:
 	let mut file = std::fs::File::create(path)?;
 
 	file.write_all(toml::to_string(data).unwrap().as_bytes())?;
+
+	Ok(())
+}
+
+pub fn symlink_dir(original: &Path, link: &Path) -> Result<(), std::io::Error> {
+	#[cfg(unix)]
+	return std::os::unix::fs::symlink(original, link);
+
+	#[cfg(target_os = "windows")]
+	return std::os::windows::fs::symlink_dir(original, link);
+}
+
+#[cfg(target_os = "windows")]
+pub fn windows_symlink_perms() -> Result<(), std::io::Error> {
+	let winuser = whoami::username();
+	let powershell_args = format!(
+		r#"secedit /export /cfg c:\\secpol.cfg; (gc C:\\secpol.cfg).replace('SeCreateSymbolicLinkPrivilege = ', 'SeCreateSymbolicLinkPrivilege = "{}",') | Out-File C:\\secpol.cfg; secedit /configure /db c:\\windows\\security\\local.sdb /cfg c:\\secpol.cfg; rm -force c:\\secpol.cfg -confirm:$false"#,
+		winuser
+	);
+
+	let powershell = std::process::Command::new("powershell.exe")
+		.arg(powershell_args)
+		.status()?;
+
+	if !powershell.success() {
+		error("Could not get symlink perms");
+		std::process::exit(1);
+	}
 
 	Ok(())
 }

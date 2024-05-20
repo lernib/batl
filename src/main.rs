@@ -1,5 +1,3 @@
-#![cfg(target_os = "linux")]
-
 use clap::{Parser, Subcommand, Args};
 
 mod commands;

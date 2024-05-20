@@ -9,13 +9,16 @@ pub mod link;
 pub mod repository;
 
 pub fn cmd_setup() -> Result<(), UtilityError> {
+	#[cfg(target_os = "windows")]
+	crate::utils::windows_symlink_perms()?;
+
 	if System::batl_root().is_some() {
 		return Err(UtilityError::AlreadySetup);
 	}
 
-	let batl_root = PathBuf::from(env::var("HOME").map_err(
-		|_| UtilityError::ResourceDoesNotExist("Home directory".to_string())
-	)?).join("battalion");
+	let batl_root = dirs::home_dir()
+		.ok_or(UtilityError::ResourceDoesNotExist("Home directory".to_string()))?
+		.join("battalion");
 
 	std::fs::create_dir_all(batl_root.join("workspaces"))?;
 	std::fs::create_dir_all(batl_root.join("repositories"))?;

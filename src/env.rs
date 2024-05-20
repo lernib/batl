@@ -36,8 +36,8 @@ impl System {
 		}
 
 		// 3. Check for battalion folder in home directory
-		if let Ok(home_dir) = env_var("HOME") {
-			let batl_dir = PathBuf::from(home_dir).join("battalion");
+		if let Some(home_dir) = dirs::home_dir() {
+			let batl_dir = home_dir.join("battalion");
 
 			if batl_dir.exists() {
 				return Some(batl_dir);
@@ -400,7 +400,7 @@ impl Workspace {
 		}
 
 		std::fs::create_dir_all(workspace_path.parent().expect("Nonsensical no workspace parent fault"))?;
-		std::os::unix::fs::symlink(repository.path(), workspace_path)?;
+		crate::utils::symlink_dir(repository.path(), &workspace_path)?;
 
 		let workspace = repository.workspaceify(repository.name().clone())?;
 
@@ -448,7 +448,7 @@ impl Workspace {
 		links.insert(name.to_string(), repo.name().to_string());
 		self.config.workspace = Some(links);
 
-		std::os::unix::fs::symlink(repo.path(), self.path.join(name))?;
+		crate::utils::symlink_dir(repo.path(), &self.path.join(name))?;
 
 		self.save()?;
 
