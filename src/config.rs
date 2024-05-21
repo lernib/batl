@@ -2,6 +2,7 @@ use semver::Version;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::env::current_dir;
+use std::hash::Hash;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
@@ -14,7 +15,8 @@ pub struct Config {
 	pub workspace: Option<HashMap<String, String>>,
 	pub repository: Option<RepositoryConfig>,
 	pub scripts: Option<HashMap<String, String>>,
-	pub dependencies: Option<HashMap<String, String>>
+	pub dependencies: Option<HashMap<String, String>>,
+	pub restrict: Option<HashMap<Restrictor, RestrictConfig>>
 }
 
 impl Config {
@@ -129,6 +131,29 @@ pub struct RepositoryConfig {
 pub struct RepositoryGitConfig {
 	pub url: String,
 	pub path: String
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Hash, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum Restrictor {
+	Windows,
+	Linux,
+	Unix,
+	MacOs
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+pub struct RestrictConfig {
+	pub include: Option<RestrictRequirement>,
+	pub dependencies: Option<HashMap<String, String>>
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum RestrictRequirement {
+	Deny,
+	Allow,
+	Require
 }
 
 #[derive(Debug, Error)]

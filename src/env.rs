@@ -194,7 +194,20 @@ impl Repository {
 
 		let mut scripts = HashMap::new();
 		scripts.insert("build".to_string(), "echo \"No build targets\" && exit 1".to_string());
-	
+
+		let mut restrictions = HashMap::new();
+
+		#[cfg(unix)]
+		let restrictor = Restrictor::Unix;
+
+		#[cfg(target_os = "windows")]
+		let restrictor = Restrictor::Windows;
+
+		restrictions.insert(restrictor, RestrictConfig {
+			include: Some(RestrictRequirement::Require),
+			dependencies: None
+		});
+
 		let config = Config {
 			environment: EnvConfig {
 				version: Version::parse(env!("CARGO_PKG_VERSION")).unwrap(),
@@ -207,7 +220,8 @@ impl Repository {
 				git: options.git
 			}),
 			scripts: Some(scripts),
-			dependencies: None
+			dependencies: None,
+			restrict: Some(restrictions)
 		};
 
 		write_toml(&repo_path.join("batl.toml"), &config)?;
@@ -375,7 +389,8 @@ impl Workspace {
 			workspace: Some(HashMap::new()),
 			repository: None,
 			scripts: None,
-			dependencies: None
+			dependencies: None,
+			restrict: None
 		};
 
 		write_toml(&batl_toml_path, &config)?;
