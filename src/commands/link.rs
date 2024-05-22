@@ -1,5 +1,5 @@
+use batl::resource::{Repository, Resource, Workspace};
 use clap::{Subcommand, ValueEnum};
-use crate::env::{Repository, Resource, Workspace};
 use crate::utils::{UtilityError, BATL_LINK_REGEX, BATL_NAME_REGEX};
 use crate::output::*;
 use std::env::current_dir;
@@ -150,7 +150,7 @@ fn cmd_run(name: String, args: Vec<String>) -> Result<(), UtilityError> {
 		return Err(UtilityError::ScriptError(format!("Exit code {}", status.code().unwrap_or(0))))
 	}
 
-	println!("");
+	println!();
 	success("Command completed successfully");
 
 	Ok(())
@@ -162,7 +162,7 @@ fn cmd_exec(name: Option<String>, script: String) -> Result<(), UtilityError> {
 			let workspace = Workspace::locate_then_load(&current_dir()?)?
 				.ok_or(UtilityError::ResourceDoesNotExist("Workspace".to_string()))?;
 
-			workspace.link(&val)
+			workspace.link(val)
 		},
 		None => Repository::locate_then_load(&current_dir()?)?
 	}.ok_or(UtilityError::ResourceDoesNotExist("Repository".to_string()))?;

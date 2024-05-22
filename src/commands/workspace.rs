@@ -1,5 +1,5 @@
+use batl::resource::{Resource, Name, Workspace};
 use clap::Subcommand;
-use crate::env::{Repository, Resource, ResourceName, System, Workspace};
 use crate::output::*;
 use crate::utils::{UtilityError, BATL_NAME_REGEX};
 use std::path::PathBuf;
@@ -11,9 +11,7 @@ pub enum Commands {
 		filter: Option<String>
 	},
 	Init {
-		name: String,
-		#[arg(long = "ref")]
-		ref_: bool
+		name: String
 	},
 	Delete {
 		name: String
@@ -28,8 +26,8 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 		Commands::Ls { filter } => {
 			cmd_ls(filter)
 		},
-		Commands::Init { name, ref_ } => {
-			cmd_init(name, ref_)
+		Commands::Init { name } => {
+			cmd_init(name)
 		},
 		Commands::Delete { name } => {
 			cmd_delete(name)
@@ -41,7 +39,7 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 }
 
 fn cmd_ls(filter: Option<String>) -> Result<(), UtilityError> {
-	let workspace_root = System::workspace_root()
+	let workspace_root = batl::system::workspace_root()
 		.ok_or(UtilityError::ResourceDoesNotExist("Workspace root".to_string()))?;
 
 	let mut to_search: Vec<(String, PathBuf)> = std::fs::read_dir(workspace_root)?
@@ -86,25 +84,16 @@ fn cmd_ls(filter: Option<String>) -> Result<(), UtilityError> {
 	Ok(())
 }
 
-fn cmd_init(name: String, ref_: bool) -> Result<(), UtilityError> {
+fn cmd_init(name: String) -> Result<(), UtilityError> {
 	if !BATL_NAME_REGEX.is_match(&name) {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	let name: ResourceName = name.into();
+	let name: Name = name.into();
 
-	if ref_ {
-		let mut repository = Repository::load(name.clone())?
-			.ok_or(UtilityError::ResourceDoesNotExist("Repository".to_string()))?;
+	Workspace::create(name.clone())?;
 
-		Workspace::create_from_repository(&mut repository)?;
-
-		success(&format!("Repository {} workspace created", name));
-	} else {
-		Workspace::create(name.clone())?;
-
-		success(&format!("Workspace {} initialized", name.clone()));
-	}
+	success(&format!("Workspace {} initialized", name.clone()));
 
 	Ok(())
 }

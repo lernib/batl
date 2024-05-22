@@ -1,8 +1,6 @@
 use clap::{Parser, Subcommand, Args};
 
 mod commands;
-mod config;
-mod env;
 mod output;
 mod utils;
 

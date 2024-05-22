@@ -1,9 +1,11 @@
+use batl::resource::{repository, Repository, Resource, Name};
+use batl::resource::repository::CreateRepositoryOptions;
+use batl::resource::tomlconfig::{TomlConfig, RepositoryGit0_2_2};
 use clap::Subcommand;
 use console::Term;
-use crate::config::*;
-use crate::env::{CreateRepositoryOptions, Repository, Resource, ResourceName, System};
 use crate::output::*;
-use crate::utils::{UtilityError, BATL_NAME_REGEX};use envfile::EnvFile;
+use crate::utils::{UtilityError, BATL_NAME_REGEX};
+use envfile::EnvFile;
 use git2::{FetchOptions, RemoteCallbacks, Progress};
 use git2::build::RepoBuilder;
 use std::env::current_dir;
@@ -91,7 +93,7 @@ pub fn run(cmd: Commands) -> Result<(), UtilityError> {
 }
 
 fn cmd_ls(filter: Option<String>) -> Result<(), UtilityError> {
-	let repo_root = System::repository_root()
+	let repo_root = batl::system::repository_root()
 		.ok_or(UtilityError::ResourceDoesNotExist("Repository root".to_string()))?;
 
 	let mut to_search: Vec<(String, PathBuf)> = std::fs::read_dir(repo_root)?
@@ -108,8 +110,8 @@ fn cmd_ls(filter: Option<String>) -> Result<(), UtilityError> {
 
 		let filename = path.file_name().unwrap().to_str().unwrap();
 
-		if filename.starts_with('@') {
-			let new_name = filename[1..].to_string();
+		if let Some(filename) = filename.strip_prefix('@') {
+			let new_name = filename.to_string();
 			let new_name = format!("{}{}/", name, new_name);
 
 			to_search.extend(
@@ -167,13 +169,13 @@ fn cmd_clone(url: String, name: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::InvalidName(name));
 	}
 
-	Repository::create(name.into(), CreateRepositoryOptions {
-		git: Some(RepositoryGitConfig {
+	Repository::create(
+		name.into(),
+		CreateRepositoryOptions::git(RepositoryGit0_2_2 {
 			url,
 			path: "git".to_string()
-		}),
-		..Default::default()
-	})?;
+		})
+	)?;
 
 	success("Initialized repository clone successfully");
 
@@ -186,7 +188,7 @@ fn cmd_scaffold() -> Result<(), UtilityError> {
 
 	let config = repository.config();
 
-	if let Some(git) = config.git {
+	if let Some(git) = config.git.clone() {
 		let git_path = repository.path().join(git.path);
 
 		let mut fetch_callbacks = RemoteCallbacks::new();
@@ -199,7 +201,7 @@ fn cmd_scaffold() -> Result<(), UtilityError> {
 			.fetch_options(fetch_options)
 			.clone(&git.url, &git_path);
 
-		println!("");
+		println!();
 
 		if let Err(err) = result {
 			println!("{}", err);
@@ -228,14 +230,14 @@ fn transfer_progress(progress: Progress<'_>) -> bool {
 }
 
 fn cmd_env(name: Option<String>, var: String) -> Result<(), UtilityError> {
-	let mut workspace_dir = Config::toml_dir(&current_dir()?)
+	let mut workspace_dir = repository::TomlConfigLatest::locate(&current_dir()?)
 		.ok_or(UtilityError::ResourceDoesNotExist("Workspace Configuration".to_string()))?;
 
 	if let Some(name) = &name {
 		workspace_dir.push(name);
 	}
 
-	let env_file = EnvFile::new(&workspace_dir.join("batl.env"))
+	let env_file = EnvFile::new(workspace_dir.join("batl.env"))
 		.map_err(|_| UtilityError::ResourceDoesNotExist("Environment variables".to_string()))?;
 
 	if let Some(val) = env_file.get(&var) {
@@ -255,7 +257,7 @@ fn cmd_archive(name: String) -> Result<(), UtilityError> {
 }
 
 fn cmd_publish(name: String) -> Result<(), UtilityError> {
-	let batlrc = System::batlrc()
+	let batlrc = batl::system::batlrc()
 		.ok_or(UtilityError::ResourceDoesNotExist("BatlRc".to_string()))?;
 
 	let repository = Repository::load(name.as_str().into())?
@@ -316,7 +318,7 @@ fn cmd_exec(name: Option<String>, script: String) -> Result<(), UtilityError> {
 		return Err(UtilityError::ScriptError(format!("Exit code {}", status.code().unwrap_or(0))))
 	}
 
-	println!("");
+	println!();
 	success("Script completed successfully");
 
 	Ok(())
@@ -331,9 +333,9 @@ fn cmd_fetch(name: String) -> Result<(), UtilityError> {
 	let body = resp.into_reader();
 	let mut tar = tar::Archive::new(body);
 
-	let repository_path = System::repository_root()
+	let repository_path = batl::system::repository_root()
 		.ok_or(UtilityError::ResourceDoesNotExist("Battalion setup".to_string()))?
-		.join(PathBuf::from(&ResourceName::from(name.as_str())));
+		.join(PathBuf::from(&Name::from(name.as_str())));
 
 	std::fs::create_dir_all(&repository_path)?;
 

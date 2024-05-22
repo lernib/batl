@@ -1,18 +1,20 @@
-use crate::config::{BatlRc, Config};
-use crate::env::System;
+use batl::resource::{self as batlres, BatlRc};
+use batl::resource::tomlconfig::{TomlConfig, write_toml};
 use crate::output::success;
-use crate::utils::{UtilityError, write_toml};
-use std::{collections::HashMap, env, path::PathBuf};
+use crate::utils::UtilityError;
+use std::collections::HashMap;
+use std::env::current_dir;
 
 pub mod workspace;
 pub mod link;
 pub mod repository;
 
+
 pub fn cmd_setup() -> Result<(), UtilityError> {
 	#[cfg(target_os = "windows")]
 	crate::utils::windows_symlink_perms()?;
 
-	if System::batl_root().is_some() {
+	if batl::system::batl_root().is_some() {
 		return Err(UtilityError::AlreadySetup);
 	}
 
@@ -33,20 +35,19 @@ pub fn cmd_setup() -> Result<(), UtilityError> {
 }
 
 pub fn cmd_add(name: String) -> Result<(), UtilityError> {
-	let config_path = Config::get_path_on_condition(|_| true)
-		.map_err(|_| UtilityError::InvalidConfig)?
+	let config_path = batlres::repository::TomlConfigLatest::locate(&current_dir()?)
 		.ok_or(UtilityError::ResourceDoesNotExist("Batallion config".to_string()))?;
 
-	let mut config = Config::read(&config_path)
+	let mut config: batlres::repository::TomlConfigLatest = batlres::tomlconfig::read_toml(&config_path)
 		.map_err(|_| UtilityError::InvalidConfig)?;
 
 	if let Some(mut deps) = config.dependencies {
-		deps.insert(name.clone(), "latest".to_string());
+		deps.insert(name.as_str().into(), "latest".to_string());
 
 		config.dependencies = Some(deps);
 	} else {
 		let mut deps = HashMap::new();
-		deps.insert(name.clone(), "latest".to_string());
+		deps.insert(name.as_str().into(), "latest".to_string());
 
 		config.dependencies = Some(deps);
 	}
@@ -59,15 +60,14 @@ pub fn cmd_add(name: String) -> Result<(), UtilityError> {
 }
 
 pub fn cmd_remove(name: String) -> Result<(), UtilityError> {
-	let config_path = Config::get_path_on_condition(|_| true)
-		.map_err(|_| UtilityError::InvalidConfig)?
+	let config_path = batlres::repository::TomlConfigLatest::locate(&current_dir()?)
 		.ok_or(UtilityError::ResourceDoesNotExist("Batallion config".to_string()))?;
 
-	let mut config = Config::read(&config_path)
+	let mut config: batlres::repository::TomlConfigLatest = batlres::tomlconfig::read_toml(&config_path)
 		.map_err(|_| UtilityError::InvalidConfig)?;
 
 	if let Some(mut deps) = config.dependencies {
-		if deps.remove(&name).is_none() {
+		if deps.remove(&name.as_str().into()).is_none() {
 			return Err(UtilityError::ResourceDoesNotExist("Dependency".to_string()))
 		}
 
@@ -84,7 +84,7 @@ pub fn cmd_remove(name: String) -> Result<(), UtilityError> {
 }
 
 pub fn cmd_upgrade() -> Result<(), UtilityError> {
-	let batl_root = System::batl_root()
+	let batl_root = batl::system::batl_root()
 		.ok_or(UtilityError::ResourceDoesNotExist("Battalion root".to_string()))?;
 
 	if !batl_root.join("gen").exists() {
@@ -98,10 +98,10 @@ pub fn cmd_upgrade() -> Result<(), UtilityError> {
 		success("Added gen folder");
 	}
 
-	if System::batlrc().is_none() {
+	if batl::system::batlrc().is_none() {
 		let batlrc = BatlRc::default();
 	
-		write_toml(&System::batlrc_path().expect("Nonsensical already checked for root"), &batlrc)?;
+		write_toml(&batl::system::batlrc_path().expect("Nonsensical already checked for root"), &batlrc)?;
 
 		success("Added batlrc toml");
 	}
@@ -114,12 +114,12 @@ pub fn cmd_auth() -> Result<(), UtilityError> {
 
 	let api_key: String = key_prompt.with_prompt("API key").interact()?;
 
-	let mut batlrc = System::batlrc()
+	let mut batlrc = batl::system::batlrc()
 		.ok_or(UtilityError::ResourceDoesNotExist("BatlRc".to_string()))?;
 
 	batlrc.api.credentials = api_key;
 
-	write_toml(&System::batlrc_path().expect("Nonsensical just read batlrc"), &batlrc)?;
+	write_toml(&batl::system::batlrc_path().expect("Nonsensical just read batlrc"), &batlrc)?;
 
 	success("Added new API key");
 

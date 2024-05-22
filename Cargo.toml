@@ -7,6 +7,8 @@ description = "The multi-repo development tool"
 homepage = "https://github.com/lernib/batl"
 repository = "https://github.com/lernib/batl"
 readme = "README.md"
+keywords = ["repository", "management", "battalion"]
+categories = ["command-line-utilities", "development-tools", "filesystem"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

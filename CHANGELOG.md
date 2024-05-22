@@ -2,6 +2,11 @@
 
 ## [0.2.2] - Unreleased
 
+### Changed
+
+- Configuration format
+	- `restrict.[restrictor]`
+
 ## [0.2.1] - 2024-05-18
 
 ### Changed

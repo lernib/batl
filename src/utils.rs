@@ -1,11 +1,10 @@
-use crate::config::ReadConfigError;
-use crate::env::{CreateDependentResourceError, CreateResourceError, DeleteResourceError, GeneralResourceError};
-use crate::output::error;
+use batl::error as batlerror;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::io::Write;
-use std::path::Path;
 use thiserror::Error;
+
+#[cfg(target_os = "windows")]
+use crate::output::error;
 
 
 lazy_static! {
@@ -36,71 +35,62 @@ pub enum UtilityError {
 	#[error("Resource cannot be collected: {0}")]
 	ResourceNotCollected(String),
 	#[error("Network Error: {0}")]
-	NetworkError(#[from] ureq::Error)
+	NetworkError(#[from] ureq::Error),
+	#[error("Unknown")]
+	Unknown
 }
 
-impl From<ReadConfigError> for UtilityError {
-	fn from(value: ReadConfigError) -> Self {
+impl From<batlerror::ReadConfigError> for UtilityError {
+	fn from(value: batlerror::ReadConfigError) -> Self {
 		match value {
-			ReadConfigError::IoError(e) => e.into(),
-			ReadConfigError::TomlError(_) => UtilityError::InvalidConfig
+			batlerror::ReadConfigError::IoError(e) => e.into(),
+			batlerror::ReadConfigError::TomlError(_) => UtilityError::InvalidConfig,
+			_ => UtilityError::Unknown
 		}
 	}
 }
 
-impl From<GeneralResourceError> for UtilityError {
-	fn from(value: GeneralResourceError) -> Self {
+impl From<batlerror::GeneralResourceError> for UtilityError {
+	fn from(value: batlerror::GeneralResourceError) -> Self {
 		match value {
-			GeneralResourceError::DoesNotExist => UtilityError::ResourceDoesNotExist("<>".to_string()),
-			GeneralResourceError::Invalid => UtilityError::InvalidConfig,
-			GeneralResourceError::IoError(e) => e.into()
+			batlerror::GeneralResourceError::DoesNotExist => UtilityError::ResourceDoesNotExist("<>".to_string()),
+			batlerror::GeneralResourceError::Invalid => UtilityError::InvalidConfig,
+			batlerror::GeneralResourceError::IoError(e) => e.into(),
+			_ => UtilityError::Unknown
 		}
 	}
 }
 
-impl From<CreateResourceError> for UtilityError {
-	fn from(value: CreateResourceError) -> Self {
+impl From<batlerror::CreateResourceError> for UtilityError {
+	fn from(value: batlerror::CreateResourceError) -> Self {
 		match value {
-			CreateResourceError::AlreadyExists => UtilityError::ResourceAlreadyExists("<>".to_string()),
-			CreateResourceError::IoError(e) => e.into(),
-			CreateResourceError::NotSetup => UtilityError::ResourceAlreadyExists("Battalion root".to_string())
+			batlerror::CreateResourceError::AlreadyExists => UtilityError::ResourceAlreadyExists("<>".to_string()),
+			batlerror::CreateResourceError::IoError(e) => e.into(),
+			batlerror::CreateResourceError::NotSetup => UtilityError::ResourceAlreadyExists("Battalion root".to_string()),
+			_ => UtilityError::Unknown
 		}
 	}
 }
 
-impl From<DeleteResourceError> for UtilityError {
-	fn from(value: DeleteResourceError) -> Self {
+impl From<batlerror::DeleteResourceError> for UtilityError {
+	fn from(value: batlerror::DeleteResourceError) -> Self {
 		match value {
-			DeleteResourceError::DoesNotExist => UtilityError::ResourceAlreadyExists("<>".to_string()),
-			DeleteResourceError::IoError(e) => e.into()
+			batlerror::DeleteResourceError::DoesNotExist => UtilityError::ResourceAlreadyExists("<>".to_string()),
+			batlerror::DeleteResourceError::IoError(e) => e.into(),
+			_ => UtilityError::Unknown
 		}
 	}
 }
 
-impl From<CreateDependentResourceError> for UtilityError {
-	fn from(value: CreateDependentResourceError) -> Self {
+impl From<batlerror::CreateDependentResourceError> for UtilityError {
+	fn from(value: batlerror::CreateDependentResourceError) -> Self {
 		match value {
-			CreateDependentResourceError::Creation(e) => e.into(),
-			CreateDependentResourceError::IoError(e) => e.into(),
-			CreateDependentResourceError::Dependent(e) => e.into()
+			batlerror::CreateDependentResourceError::Creation(e) => e.into(),
+			batlerror::CreateDependentResourceError::IoError(e) => e.into(),
+			batlerror::CreateDependentResourceError::Dependent(e) => e.into(),
+			_ => UtilityError::Unknown
 		}
 	}
-}
-
-pub fn write_toml<T: serde::Serialize>(path: &Path, data: &T) -> Result<(), std::io::Error> {
-	let mut file = std::fs::File::create(path)?;
-
-	file.write_all(toml::to_string(data).unwrap().as_bytes())?;
-
-	Ok(())
-}
-
-pub fn symlink_dir(original: &Path, link: &Path) -> Result<(), std::io::Error> {
-	#[cfg(unix)]
-	return std::os::unix::fs::symlink(original, link);
-
-	#[cfg(target_os = "windows")]
-	return std::os::windows::fs::symlink_dir(original, link);
 }
 
 #[cfg(target_os = "windows")]
