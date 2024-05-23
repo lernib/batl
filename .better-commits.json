@@ -86,6 +86,10 @@
 				"label": "crate"
 			},
 			{
+				"value": "repo",
+				"label": "repository"
+			},
+			{
 				"value": "",
 				"label": "none"
 			}

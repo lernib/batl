@@ -234,6 +234,7 @@ pub struct Config {
 	pub dependencies: HashMap<Name, String>
 }
 
+// CONFIG VERSIONS //
 pub type TomlConfigLatest = TomlConfig0_2_2;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]

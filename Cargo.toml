@@ -1,35 +1,6 @@
-[package]
-name = "batl"
-version = "0.2.2"
-edition = "2021"
-license = "MIT"
-description = "The multi-repo development tool"
-homepage = "https://github.com/lernib/batl"
-repository = "https://github.com/lernib/batl"
-readme = "README.md"
-keywords = ["repository", "management", "battalion"]
-categories = ["command-line-utilities", "development-tools", "filesystem"]
+[workspace]
+resolver = "2"
+members = [
+	"packages/batl"
+]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-clap = { version = "4.2.5", features = ["derive"] }
-colored = "2.0.0"
-console = "0.15.8"
-dialoguer = "0.10.4"
-dirs = "1.0"
-envfile = "0.2.1"
-flate2 = "1.0.30"
-git2 = "0.18.3"
-ignore = "0.4.22"
-lazy_static = "1.4.0"
-pathdiff = "0.2.1"
-rand = "0.8.5"
-regex = "1.8.1"
-semver = { version = "1.0.23", features = ["serde"] }
-serde = { version = "1", features = ["derive"] }
-tar = "0.4.40"
-thiserror = "1.0.40"
-toml = "0.7.3"
-ureq = "2.9.7"
-whoami = "1.5.1"
