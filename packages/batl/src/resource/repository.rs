@@ -49,11 +49,12 @@ impl Repository {
 			.map(|p| p.join(PathBuf::from(&name)));
 
 		if let Some(path) = repo_path {
-			let toml: TomlConfigLatest = tomlconfig::read_toml(&path.join("batl.toml"))?;
+			let toml = AnyTomlConfig::read_toml(&path.join("batl.toml"))?;
+			let latest = TomlConfigLatest::from(toml);
 
 			Ok(Some(Self {
 				path,
-				config: Config::from(toml),
+				config: Config::from(latest),
 				name
 			}))
 		} else {
@@ -139,12 +140,13 @@ impl Repository {
 	/// Propogates any errors found along the way
 	#[inline]
 	pub fn from_path(path: &Path) -> Result<Self, batlerror::GeneralResourceError> {
-		let toml: TomlConfigLatest = tomlconfig::read_toml(&path.join("batl.toml"))?;
+		let toml = AnyTomlConfig::read_toml(&path.join("batl.toml"))?;
+		let latest = TomlConfigLatest::from(toml);
 
 		Ok(Self {
 			name: path.into(),
 			path: path.to_path_buf(),
-			config: Config::from(toml)
+			config: Config::from(latest)
 		})
 	}
 
@@ -289,6 +291,43 @@ pub struct GitConfig {
 	pub path: String
 }
 
+#[non_exhaustive]
+pub enum AnyTomlConfig {
+	V0_2_2(TomlConfig0_2_2),
+	V0_2_1(TomlConfig0_2_1),
+	V0_2_0(TomlConfig0_2_0)
+}
+
+#[allow(clippy::missing_trait_methods)]
+impl TomlConfig for AnyTomlConfig {
+	#[inline]
+	fn read_toml(path: &Path) -> Result<Self, batlerror::ReadConfigError> {
+		let config_str = std::fs::read_to_string(path)?;
+
+		if let Ok(v022) = toml::from_str(&config_str) {
+			return Ok(Self::V0_2_2(v022));
+		}
+
+		if let Ok(v022) = toml::from_str(&config_str) {
+			return Ok(Self::V0_2_1(v022));
+		}
+
+		Ok(Self::V0_2_0(toml::from_str(&config_str)?))
+	}
+}
+
+impl From<AnyTomlConfig> for TomlConfigLatest {
+	#[inline]
+	fn from(value: AnyTomlConfig) -> Self {
+		match value {
+			AnyTomlConfig::V0_2_0(v020) => v020.into(),
+			AnyTomlConfig::V0_2_1(v021) => v021.into(),
+			AnyTomlConfig::V0_2_2(v022) => v022
+		}
+	}
+}
+
+// CONFIG VERSIONS //
 pub type TomlConfigLatest = TomlConfig0_2_2;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -301,8 +340,57 @@ pub struct TomlConfig0_2_2 {
 	pub restrict: Option<tomlconfig::Restrict0_2_2>
 }
 
-#[allow(clippy::missing_trait_methods)]
-impl TomlConfig for TomlConfig0_2_2 {}
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct TomlConfig0_2_1 {
+	pub environment: tomlconfig::Environment0_2_1,
+	pub repository: tomlconfig::Repository0_2_1,
+	pub scripts: Option<tomlconfig::Scripts0_2_1>,
+	pub dependencies: Option<tomlconfig::Dependencies0_2_1>
+}
+
+impl From<TomlConfig0_2_1> for TomlConfigLatest {
+	#[inline]
+	fn from(value: TomlConfig0_2_1) -> Self {
+		Self {
+			environment: tomlconfig::EnvironmentLatest::default(),
+			repository: tomlconfig::RepositoryLatest {
+				name: value.repository.name,
+				version: value.repository.version,
+				git: value.repository.git
+			},
+			scripts: value.scripts,
+			dependencies: value.dependencies,
+			restrict: None
+		}
+	}
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct TomlConfig0_2_0 {
+	pub environment: tomlconfig::Environment0_2_0,
+	pub repository: tomlconfig::Repository0_2_0,
+	pub scripts: Option<tomlconfig::Scripts0_2_0>,
+	pub dependencies: Option<tomlconfig::Dependencies0_2_0>
+}
+
+impl From<TomlConfig0_2_0> for TomlConfigLatest {
+	#[inline]
+	fn from(value: TomlConfig0_2_0) -> Self {
+		Self {
+			environment: tomlconfig::EnvironmentLatest::default(),
+			repository: tomlconfig::RepositoryLatest {
+				name: value.repository.name,
+				version: value.repository.version,
+				git: value.repository.git
+			},
+			scripts: value.scripts,
+			dependencies: value.dependencies,
+			restrict: None
+		}
+	}
+}
 
 impl From<TomlConfig0_2_2> for Config {
 	#[inline]

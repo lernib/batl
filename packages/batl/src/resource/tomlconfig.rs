@@ -1,9 +1,9 @@
 #![allow(clippy::exhaustive_structs)]
 #![allow(clippy::exhaustive_enums)]
 
+use batl_macros::environment_struct_impl;
 use crate::error::ReadConfigError;
 use crate::resource::Name;
-use crate::version::*;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use std::io::Write;
@@ -18,10 +18,9 @@ pub type DependenciesLatest = Dependencies0_2_2;
 pub type RestrictLatest = Restrict0_2_2;
 pub type RestrictorLatest = Restrictor0_2_2;
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Default)]
-pub struct Environment0_2_2 {
-	pub version: Version0_2_2
-}
+environment_struct_impl!("0.2.0");
+environment_struct_impl!("0.2.1");
+environment_struct_impl!("0.2.2");
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct Repository0_2_2 {
@@ -64,31 +63,38 @@ pub enum RestrictRequirement0_2_2 {
 	Require
 }
 
+pub type Repository0_2_1 = Repository0_2_0;
+pub type Workspace0_2_1 = Workspace0_2_0;
+pub type Links0_2_1 = Links0_2_0;
+pub type RepositoryGit0_2_1 = RepositoryGit0_2_0;
+pub type Scripts0_2_1 = Scripts0_2_0;
+pub type Dependencies0_2_1 = Dependencies0_2_0;
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-pub struct Repository0_2_1 {
+pub struct Repository0_2_0 {
 	pub name: Name,
 	pub version: semver::Version,
 	pub build: Option<String>,
-	pub git: Option<RepositoryGit0_2_1>
+	pub git: Option<RepositoryGit0_2_0>
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-pub struct Workspace0_2_1 {
+pub struct Workspace0_2_0 {
 	pub name: Name,
 	pub version: semver::Version,
 	pub build: Option<String>
 }
 
-pub type Links0_2_1 = HashMap<String, Name>;
+pub type Links0_2_0 = HashMap<String, Name>;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
-pub struct RepositoryGit0_2_1 {
+pub struct RepositoryGit0_2_0 {
 	pub url: String,
 	pub path: String
 }
 
-pub type Scripts0_2_1 = HashMap<String, String>;
-pub type Dependencies0_2_1 = HashMap<Name, String>;
+pub type Scripts0_2_0 = HashMap<String, String>;
+pub type Dependencies0_2_0 = HashMap<Name, String>;
 
 
 /// Writes a toml struct to a path
@@ -105,17 +111,6 @@ pub fn write_toml<T: serde::Serialize>(path: &Path, data: &T) -> Result<(), std:
 	Ok(())
 }
 
-/// Reads a toml file from a path
-/// 
-/// # Errors
-/// 
-/// Propogates any toml and IO errors to the caller
-#[inline]
-pub fn read_toml<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, ReadConfigError> {
-	let config_str = std::fs::read_to_string(path)?;
-	Ok(toml::from_str(&config_str)?)
-}
-
 /// Returns `None` if a hashmap is empty
 #[inline]
 #[must_use]
@@ -127,7 +122,14 @@ pub fn hashmap_to_option_hashmap<K, V, S>(map: HashMap<K, V, S>) -> Option<HashM
 	}
 }
 
-pub trait TomlConfig: serde::de::DeserializeOwned {
+pub trait TomlConfig: Sized {
+	/// Reads a toml file from a path
+	/// 
+	/// # Errors
+	/// 
+	/// Propogates any toml and IO errors to the caller
+	fn read_toml(path: &Path) -> Result<Self, ReadConfigError>;
+
 	/// Starts at the path given, then searches all
 	/// parents for a batl.toml, returning the first
 	/// directory with one.
@@ -161,7 +163,7 @@ pub trait TomlConfig: serde::de::DeserializeOwned {
 		let mut search_dir = Self::locate_possible(current);
 
 		while let Some(config_dir) = search_dir {
-			let config: Result<Self, _> = read_toml(&config_dir.join("batl.toml"));
+			let config = Self::read_toml(&config_dir.join("batl.toml"));
 
 			match config {
 				Ok(_) => {
@@ -190,7 +192,7 @@ pub trait TomlConfig: serde::de::DeserializeOwned {
 		let mut search_dir = Self::locate_possible(current);
 
 		while let Some(config_dir) = search_dir {
-			let config: Result<Self, _> = read_toml(&config_dir.join("batl.toml"));
+			let config = Self::read_toml(&config_dir.join("batl.toml"));
 
 			match config {
 				Ok(config_out) => {
@@ -205,5 +207,17 @@ pub trait TomlConfig: serde::de::DeserializeOwned {
 		}
 
 		None
+	}
+}
+
+#[allow(clippy::missing_trait_methods)]
+impl<T> TomlConfig for T
+where
+	T: serde::de::DeserializeOwned
+{
+	#[inline]
+	fn read_toml(path: &Path) -> Result<Self, ReadConfigError> {
+		let config_str = std::fs::read_to_string(path)?;
+		Ok(toml::from_str(&config_str)?)
 	}
 }

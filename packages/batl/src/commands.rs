@@ -38,7 +38,7 @@ pub fn cmd_add(name: String) -> Result<(), UtilityError> {
 	let config_path = batlres::repository::TomlConfigLatest::locate(&current_dir()?)
 		.ok_or(UtilityError::ResourceDoesNotExist("Batallion config".to_string()))?;
 
-	let mut config: batlres::repository::TomlConfigLatest = batlres::tomlconfig::read_toml(&config_path)
+	let mut config = batlres::repository::TomlConfigLatest::read_toml(&config_path)
 		.map_err(|_| UtilityError::InvalidConfig)?;
 
 	if let Some(mut deps) = config.dependencies {
@@ -63,7 +63,7 @@ pub fn cmd_remove(name: String) -> Result<(), UtilityError> {
 	let config_path = batlres::repository::TomlConfigLatest::locate(&current_dir()?)
 		.ok_or(UtilityError::ResourceDoesNotExist("Batallion config".to_string()))?;
 
-	let mut config: batlres::repository::TomlConfigLatest = batlres::tomlconfig::read_toml(&config_path)
+	let mut config = batlres::repository::TomlConfigLatest::read_toml(&config_path)
 		.map_err(|_| UtilityError::InvalidConfig)?;
 
 	if let Some(mut deps) = config.dependencies {
